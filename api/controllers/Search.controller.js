@@ -1,4 +1,4 @@
-import {Types} from "mongoose";
+import { Types } from "mongoose";
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
 
@@ -6,44 +6,75 @@ export const searchEverything = async (req, res) => {
   const userId = req.user._id;
   const query = req.query.q?.trim();
 
-  if (!query) return res.status(400).json({ message: 'Query is required' });
+  if (!query) return res.status(400).json({ message: "Query is required" });
 
   try {
+    const chatMap = new Map();
+
     const allMessages = await Message.find({
-      $or: [{ senderId: userId }, { receiverId: userId }]
+      $or: [{ senderId: userId }, { receiverId: userId }],
     });
 
     const chatUserIds = [
-  ...new Set(
-    allMessages.map(msg =>
-      msg.senderId.toString() === userId.toString()
-        ? msg.receiverId.toString()
-        : msg.senderId.toString()
-    )
-  )
-];
+      ...new Set(
+        allMessages.map((msg) =>
+          msg.senderId.toString() === userId.toString()
+            ? msg.receiverId.toString()
+            : msg.senderId.toString()
+        )
+      ),
+    ];
 
-// 👇 convert all to ObjectId
-const excludedUserIds = chatUserIds.map(id => new Types.ObjectId(id));
-excludedUserIds.push(new Types.ObjectId(userId));
+    allMessages
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .forEach((msg) => {
+        const otherUserId =
+          msg.senderId.toString() === userId.toString()
+            ? msg.receiverId.toString()
+            : msg.senderId.toString();
+
+        if (!chatMap.has(otherUserId)) {
+          chatMap.set(otherUserId, {
+            userId: otherUserId,
+            lastMessage: msg.text || "📷 Image",
+            updatedAt: msg.updatedAt,
+          });
+        }
+      });
+
+    const lastMessages = Array.from(chatMap.values());
+
+    // 👇 convert all to ObjectId
+    const excludedUserIds = chatUserIds.map((id) => new Types.ObjectId(id));
+    excludedUserIds.push(new Types.ObjectId(userId));
 
     // 1️⃣ From Chat Users where name matches
     const chatUsers = await User.find({
       _id: { $in: chatUserIds },
-      fullName: { $regex: query, $options: 'i' }
-    }).select('_id fullName profilePic');
+      fullName: { $regex: query, $options: "i" },
+    }).select("_id fullName profilePic");
+
+    //Full Chat list with last messages
+    const fullChatList = lastMessages.map((item) => {
+      const user = chatUsers.find((u) => u._id.toString() === item.userId);
+      return {
+        user,
+        lastMessage: item.lastMessage,
+        updatedAt: item.updatedAt,
+      };
+    });
 
     // 2️⃣ From all other users (not chatted with yet)
     const otherUsers = await User.find({
       _id: { $nin: excludedUserIds },
-      fullName: { $regex: query, $options: 'i' }
-    }).select('_id fullName profilePic');
+      fullName: { $regex: query, $options: "i" },
+    }).select("_id fullName profilePic bio");
 
     // 3️⃣ Search Messages containing the query
     const messagesWithMatch = await Message.find({
       $or: [{ senderId: userId }, { receiverId: userId }],
-      text: { $regex: query, $options: 'i' }
-    }).populate('senderId receiverId', 'fullName profilePic');
+      text: { $regex: query, $options: "i" },
+    }).populate("senderId receiverId", "fullName profilePic");
 
     const messageResults = [];
     const seenUsers = new Set();
@@ -62,21 +93,20 @@ excludedUserIds.push(new Types.ObjectId(userId));
           user: {
             _id: otherUser._id,
             fullName: otherUser.fullName,
-            profilePic: otherUser.profilePic
+            profilePic: otherUser.profilePic,
           },
-          matchedMessage: msg.text
+          matchedMessage: msg.text,
         });
       }
     }
 
     res.json({
-      chatUsers: chatUsers,
+      chatUsers: fullChatList,
       AllUsers: otherUsers,
-      fromMessages: messageResults
+      fromMessages: messageResults,
     });
-
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Something went wrong' });
+    res.status(500).json({ message: "Something went wrong" });
   }
 };

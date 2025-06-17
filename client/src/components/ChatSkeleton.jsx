@@ -15,7 +15,7 @@ export default function ChatSkeleton() {
       {[...Array(10)].map((_, i) => (
         <Flex key={i} justify={i % 2 === 0 ? "flex-start" : "flex-end"}>
           <Box
-            maxW="60%"
+            maxW="40%"
             w="100%"
             bg={i % 2 === 0 ? "gray.100" : "blue.100"}
             p={3}

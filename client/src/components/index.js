@@ -6,6 +6,7 @@ import DynamicAvatar from "./DynamicAvatar";
 import ChatTopHeader from './ChatTopHeader';
 import ChatContainer from "./ChatContainer";
 import MessageInput from "./MessageInput";
+import SidebarUser from "./SidebarUser";
 
 export {
       Login,
@@ -15,5 +16,6 @@ export {
       DynamicAvatar,
       ChatTopHeader,
       ChatContainer,
-      MessageInput
+      MessageInput,
+      SidebarUser
 }

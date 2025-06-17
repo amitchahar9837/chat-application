@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema({
             required:false,
             default:null,
       },
+      bio:{
+            type:String,
+            required:false,
+            default:"Hey there! I am using ChatApp",
+      }
 })
 
 userSchema.pre("save", async function(next){
