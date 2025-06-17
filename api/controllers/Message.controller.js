@@ -76,17 +76,17 @@ export const sendMessage = async (req, res) => {
       text,
       image: imageUrl,
     });
-    newMessage.save();
 
-    // Emit the new message to the receiver's socket
-    const receiverSocketId = getReceiverSocketId(receiverId);
-    if(receiverSocketId){
-      io.to(receiverSocketId).emit("newMessage", newMessage);
-    }
+    newMessage.save().then((savedMessage) => {
+      const receiverSocketId = getReceiverSocketId(receiverId);
+      console.log("🧠 Receiver Socket ID:", receiverSocketId);
+      console.log("📤 Emitting message:", savedMessage);
 
-    //realtime functionality goes here with socket io =>
-
-    res.status(201).json(newMessage);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("newMessage", savedMessage); // ✅ Emit to receiver
+      }
+      res.status(201).json(savedMessage);
+    });
   } catch (error) {
     errorHandler(res, error.statusCode, error.message);
   }

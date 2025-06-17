@@ -10,11 +10,25 @@ import {
 import { AddIcon, CloseIcon } from "@chakra-ui/icons";
 import { FaPaperPlane } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { sendMessage } from "../redux/slices/ChatSlice";
 
 const MotionBox = motion(Box);
 
 export default function MessageInput() {
   const { isOpen, onToggle } = useDisclosure();
+  const [messageData, setMessageData] = useState({
+    text:"",
+    image: null,
+  });
+  const dispatch = useDispatch();
+
+  const handleSendMessage = () => {
+    if (messageData.text.trim()) {
+      dispatch(sendMessage(messageData));
+    }
+  };
 
   return (
     <Box bg="#F0F2F5" p={3}>
@@ -67,6 +81,8 @@ export default function MessageInput() {
           placeholder="Type a message"
           borderRadius="full"
           flex="1"
+          value={messageData.text}
+          onChange={(e) => setMessageData(prev => ({ ...prev, text: e.target.value }))}
         />
 
         {/* Right: Send icon */}
@@ -78,6 +94,7 @@ export default function MessageInput() {
           _hover={{ bg: "gray.100" }}
           borderRadius="full"
           size="sm"
+          onClick={handleSendMessage}
         />
       </Flex>
     </Box>

@@ -12,36 +12,49 @@ const initialState = {
 };
 
 // Thunks
-export const getUsers = createAsyncThunk("chat/getUsers", async (_, { rejectWithValue }) => {
-  try {
-    const res = await axiosInstance.get("/message/users");
-    return res.data;
-  } catch (error) {
-    toast.error(error.response.data.message);
-    return rejectWithValue(error.response.data.message);
+export const getUsers = createAsyncThunk(
+  "chat/getUsers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get("/message/users");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return rejectWithValue(error.response.data.message);
+    }
   }
-});
+);
 
-export const getMessages = createAsyncThunk("chat/getMessages", async (userId, { rejectWithValue }) => {
-  try {
-    const res = await axiosInstance.get(`/messages/${userId}`);
-    return res.data;
-  } catch (error) {
-    toast.error(error.response.data.message);
-    return rejectWithValue(error.response.data.message);
+export const getMessages = createAsyncThunk(
+  "chat/getMessages",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(`/message/${userId}`);
+      return res.data;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return rejectWithValue(error.response.data.message);
+    }
   }
-});
+);
 
-export const sendMessage = createAsyncThunk("chat/sendMessage", async (messageData, { getState, rejectWithValue }) => {
-  try {
-    const selectedUser = getState().chat.selectedUser;
-    const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-    return res.data;
-  } catch (error) {
-    toast.error(error.response.data.message);
-    return rejectWithValue(error.response.data.message);
+export const sendMessage = createAsyncThunk(
+  "chat/sendMessage",
+  async (messageData, { getState, rejectWithValue }) => {
+    console.log("messageData", messageData);
+    try {
+      const selectedUser = getState().chat.selectedUser;
+      const res = await axiosInstance.post(
+        `/message/send/${selectedUser._id}`,
+        messageData
+      );
+      return res.data;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return rejectWithValue(error.response.data.message);
+    }
   }
-});
+);
 
 // Slice
 const chatSlice = createSlice({
@@ -53,8 +66,11 @@ const chatSlice = createSlice({
     },
     addIncomingMessage: (state, action) => {
       const newMessage = action.payload;
-      const isFromSelectedUser = newMessage.senderId === state.selectedUser?._id;
-      if (isFromSelectedUser) {
+      const isRelevant =
+        newMessage.senderId === state.selectedUser?._id ||
+        newMessage.receiverId === state.selectedUser?._id;
+
+      if (isRelevant) {
         state.messages.push(newMessage);
       }
     },
@@ -88,10 +104,18 @@ const chatSlice = createSlice({
 
       // sendMessage
       .addCase(sendMessage.fulfilled, (state, action) => {
-        state.messages.push(action.payload);
+        const newMessage = action.payload;
+        const isRelevant =
+          newMessage.senderId === state.selectedUser?._id ||
+          newMessage.receiverId === state.selectedUser?._id;
+
+        if (isRelevant) {
+          state.messages.push(newMessage);
+        }
       });
   },
 });
 
-export const { setSelectedUser, addIncomingMessage, resetChatState } = chatSlice.actions;
+export const { setSelectedUser, addIncomingMessage, resetChatState } =
+  chatSlice.actions;
 export default chatSlice.reducer;

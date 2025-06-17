@@ -23,10 +23,8 @@ export const checkAuth = createAsyncThunk(
   async (_, { dispatch, rejectWithValue }) => {
     try {
       const res = await axiosInstance.get("/auth/check");
-      dispatch(connectSocket(res.data._id));
       return res.data;
     } catch (err) {
-      console.log(err)
       toast.error(err?.response?.data?.message || "Check auth failed");
       return rejectWithValue(
         err.response?.data?.message || "Check auth failed"
@@ -105,7 +103,6 @@ export const connectSocket = (userId) => (dispatch) => {
   dispatch(setSocket(socket));
 
   socket.on("getOnlineUsers", (userIds) => {
-    console.log('user:', userIds)
     dispatch(setOnlineUsers(userIds));
   });
 };
