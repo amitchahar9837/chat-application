@@ -1,5 +1,5 @@
 import { Flex, Box, Text } from "@chakra-ui/react";
-import { Sidebar, NoChatSelected } from "../components";
+import { Sidebar, NoChatSelected, ChatContainer } from "../components";
 import { useSelector } from "react-redux";
 
 export default function Homepage() {
@@ -9,7 +9,7 @@ export default function Homepage() {
       <Flex w={"100%"}>
         <Sidebar />
         <Flex w={"100%"} display={{base:"none", md:"flex"}} >
-          {selectedUser ? <Text>Chat</Text> : <NoChatSelected />}
+          {selectedUser ? <ChatContainer/> : <NoChatSelected />}
         </Flex>
       </Flex>
     </Box>

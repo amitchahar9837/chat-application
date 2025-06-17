@@ -29,7 +29,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getUsers } from "../redux/slices/ChatSlice";
+import { getUsers, setSelectedUser } from "../redux/slices/ChatSlice";
 import { logout } from "../redux/slices/AuthSlice";
 import DynamicAvatar from "./DynamicAvatar";
 import { axiosInstance } from "../utils/axiosInstance";
@@ -69,6 +69,7 @@ export default function Sidebar() {
       return () => clearTimeout(delayDebounceFn); 
     }
   },[searchQuery])
+
 
   return (
     <Box
@@ -151,6 +152,7 @@ export default function Sidebar() {
           users.map((data) => (
             <Flex
               key={data.user._id}
+              onClick={()=>dispatch(setSelectedUser(data.user))}
               align="center"
               gap={3}
               _hover={{ bg: "gray.100", cursor: "pointer" }}
