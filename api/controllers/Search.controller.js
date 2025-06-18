@@ -106,7 +106,6 @@ export const searchEverything = async (req, res) => {
       fromMessages: messageResults,
     });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Something went wrong" });
   }
 };

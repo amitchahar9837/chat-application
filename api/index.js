@@ -10,12 +10,14 @@ import { app, server } from './lib/socket.js';
 dotenv.config();
 
 const PORT = process.env.PORT || 3001;
+const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:5173`;
 
 app.use(express.json());
 app.use(cookieParser());
+console.log(CLIENT_URL)
 
 app.use(cors({
-      origin: 'http://localhost:5173',
+      origin: CLIENT_URL,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
       allowedHeaders: ["Content-Type", "Authorization"],

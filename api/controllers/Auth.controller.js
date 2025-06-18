@@ -95,7 +95,6 @@ export const signup = async (req, res) => {
 //LOGIN Controller
 export const login = async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password)
 
   if (!email) {
     return errorHandler(res, 404, "Validation error.", {
