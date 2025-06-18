@@ -3,26 +3,20 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { checkAuth } from "./redux/slices/AuthSlice";
-import { Spinner, Text, VStack } from "@chakra-ui/react";
+import { Spinner, Text, useBreakpointValue, VStack } from "@chakra-ui/react";
 import "./App.css";
-import { connectSocket } from "./utils/socket";
+import { setSelectedUser } from "./redux/slices/ChatSlice";
+import { ChatContainer } from "./components";
 
 export default function App() {
-  const { isCheckingAuth, authUser, socket } = useSelector(
-    (state) => state.auth
-  );
+  const { isCheckingAuth, authUser } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   useEffect(() => {
     dispatch(checkAuth());
+    dispatch(setSelectedUser(null));
   }, []);
-
-  useEffect(() => {
-    console.log(authUser._id)
-    if (authUser?._id) {
-      connectSocket(authUser._id); 
-    }
-  }, [authUser]);
 
   if (isCheckingAuth && !authUser) {
     return (
@@ -39,6 +33,12 @@ export default function App() {
           path="/"
           element={authUser ? <Homepage /> : <Navigate to="/auth" />}
         />
+        {isMobile && (
+          <Route
+            path="/chat/:userId"
+            element={authUser ? <ChatContainer /> : <Navigate to="/auth" />}
+          />
+        )}
         <Route
           path="/profile"
           element={authUser ? <Profile /> : <Navigate to="/auth" />}

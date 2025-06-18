@@ -4,9 +4,8 @@ import { Box, Text } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import ChatSkeleton from "./ChatSkeleton";
 import MessageInput from "./MessageInput";
-import { addIncomingMessage, getMessages } from "../redux/slices/ChatSlice";
+import { addIncomingMessage, getMessages, getUsers, updateLastMessageInSidebar } from "../redux/slices/ChatSlice";
 import { formatTime } from "../utils/formatTime";
-import {getSocket} from '../utils/socket'
 
 export default function ChatContainer() {
   const selectedUser = useSelector((state) => state.chat.selectedUser);
@@ -15,6 +14,7 @@ export default function ChatContainer() {
   const authUser = useSelector((state) => state.auth.authUser);
   const dispatch = useDispatch();
   const messagesContainerRef = React.useRef(null);
+  const socket = useSelector((state) => state.auth.socket);
 
   useEffect(() => {
     if (selectedUser) {
@@ -30,46 +30,71 @@ export default function ChatContainer() {
   }, [messages]);
 
   useEffect(() => {
-  const socket = getSocket();
-  if (!socket) {
-    console.log("⚠️ Socket not initialized yet");
-    return;
-  }
+      if (socket) {
+        socket.on("newMessage", (message) => {
+          dispatch(addIncomingMessage(message));
+          dispatch(
+            updateLastMessageInSidebar({
+              ...message,
+              authUserId: authUser._id,
+            })
+          );
+        });
+      }
+      return () => {
+        if (socket) {
+          socket.off("newMessage");
+        }
+      };
+    }, [socket, dispatch]);
 
-  console.log("👂 Setting up socket listener for newMessage");
+  // useEffect(() => {
+  //   if (!socket) {
+  //     return;
+  //   }
 
-  socket.on("newMessage", (message) => {
-    console.log("📨 Received new message via socket:", message);
-    dispatch(addIncomingMessage(message));
-  });
+  //   const handleConnect = () => {
+  //     socket.on("newMessage", (message) => {
+  //       dispatch(addIncomingMessage(message));
+  //       dispatch(getUsers())
+  //     });
+  //   };
+  //   // If already connected, set up immediately
+  //   if (socket.connected) {
+  //     handleConnect();
+  //   } else {
+  //     socket.on("connect", handleConnect);
+  //   }
 
-  return () => {
-    socket.off("newMessage");
-  };
-}, []);
+  //   // Cleanup
+  //   return () => {
+  //     socket.off("connect", handleConnect);
+  //     socket.off("newMessage");
+  //   };
+  // }, [socket]);
 
   return (
     <Box
       flex="1"
       display="flex"
       flexDirection="column"
-      height="100vh"
+      height="100dvh"
       width="100%"
       borderLeft="1px solid #ccc"
     >
       <ChatTopHeader
         user={{ fullName: selectedUser.fullName, profilePic: "" }}
-        isOnline={onlineUsers.includes(selectedUser._id)}
+        isOnline={onlineUsers && onlineUsers.includes(selectedUser._id)}
         onDeleteChat={() => console.log("Chat deleted")}
       />
       {isMessagesLoading && <ChatSkeleton />}
       <Box
         p={4}
         overflowY="auto"
-        h="calc(100% - 150px)"
+        h="calc(100% - 130px)"
         direction="column-reverse"
         ref={messagesContainerRef}
-      >
+      >        
         {messages.map((message, index) => (
           <Box
             key={index}

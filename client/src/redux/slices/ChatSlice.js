@@ -74,6 +74,27 @@ const chatSlice = createSlice({
         state.messages.push(newMessage);
       }
     },
+    updateLastMessageInSidebar: (state, action) => {
+      const { senderId, receiverId, text, createdAt, authUserId, sender } =
+        action.payload;
+
+      const targetId = senderId === authUserId ? receiverId : senderId;
+
+      const userIndex = state.users.findIndex((u) => u.user._id === targetId);
+      if (userIndex !== -1) {
+        state.users[userIndex].lastMessage = text;
+        state.users[userIndex].updatedAt = createdAt;
+      } else {
+        state.users.unshift({
+          user: { _id: targetId, fullName: sender.fullName, profilePic: sender.profilePic },
+          lastMessage: text,
+          updatedAt: createdAt,
+        });
+      }
+    },
+    resetMessages:(state) =>{
+      state.messages = [];
+    },
     resetChatState: () => initialState,
   },
   extraReducers: (builder) => {
@@ -116,6 +137,11 @@ const chatSlice = createSlice({
   },
 });
 
-export const { setSelectedUser, addIncomingMessage, resetChatState } =
-  chatSlice.actions;
+export const {
+  setSelectedUser,
+  addIncomingMessage,
+  resetChatState,
+  updateLastMessageInSidebar,
+  resetMessages,
+} = chatSlice.actions;
 export default chatSlice.reducer;

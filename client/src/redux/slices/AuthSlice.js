@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 
 const BASE_URL =
   import.meta.env.MODE === "development" ? "http://localhost:3001" : "/";
+// const BASE_URL =
+//   import.meta.env.MODE === "development" ? "http://192.168.1.133:3001" : "/";
 
 let socket = null;
 
@@ -23,6 +25,7 @@ export const checkAuth = createAsyncThunk(
   async (_, { dispatch, rejectWithValue }) => {
     try {
       const res = await axiosInstance.get("/auth/check");
+      dispatch(connectSocket(res.data._id));
       return res.data;
     } catch (err) {
       toast.error(err?.response?.data?.message || "Check auth failed");
@@ -38,9 +41,9 @@ export const login = createAsyncThunk(
   async (data, { dispatch, rejectWithValue }) => {
     try {
       const res = await axiosInstance.post("/auth/login", data);
-      toast.success("Logged in successfully");
-      dispatch(checkAuth())
-      return res.data;
+      toast.success("Logged in successfully");      
+      dispatch(connectSocket(res.data.data.user._id))
+      return res.data.data.user;
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed");
       return rejectWithValue(err.response?.data?.message);
@@ -54,8 +57,8 @@ export const signup = createAsyncThunk(
     try {
       const res = await axiosInstance.post("/auth/signup", data);
       toast.success("Account created successfully");
-      dispatch(checkAuth());
-      return res.data;      
+      dispatch(connectSocket(res.data.data.user._id))
+      return res.data.data.user;      
     } catch (err) {
       toast.error(err.response?.data?.message || "Signup failed");
       return rejectWithValue(err.response?.data?.message);
@@ -145,7 +148,7 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.authUser = action.payload;
-        state.isLoggingIn = false;
+        state.isLoggingIn = false;        
       })
       .addCase(login.rejected, (state) => {
         state.isLoggingIn = false;

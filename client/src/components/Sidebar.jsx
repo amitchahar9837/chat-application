@@ -1,4 +1,10 @@
-import { ArrowBackIcon, CloseIcon, Icon, SearchIcon, SmallCloseIcon } from "@chakra-ui/icons";
+import {
+  ArrowBackIcon,
+  CloseIcon,
+  Icon,
+  SearchIcon,
+  SmallCloseIcon,
+} from "@chakra-ui/icons";
 import {
   Avatar,
   Box,
@@ -29,7 +35,12 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getUsers, setSelectedUser } from "../redux/slices/ChatSlice";
+import {
+  addIncomingMessage,
+  getUsers,
+  setSelectedUser,
+  updateLastMessageInSidebar,
+} from "../redux/slices/ChatSlice";
 import { logout } from "../redux/slices/AuthSlice";
 import DynamicAvatar from "./DynamicAvatar";
 import { axiosInstance } from "../utils/axiosInstance";
@@ -44,7 +55,8 @@ export default function Sidebar() {
   const authUser = useSelector((state) => state.auth.authUser);
   const dispatch = useDispatch();
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchResult, setSearchResult] = useState({}); //All users [], Chat Users[], fromMessages[]
+  const [searchResult, setSearchResult] = useState({});
+  const socket = useSelector((state) => state.auth.socket);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -53,6 +65,25 @@ export default function Sidebar() {
   useEffect(() => {
     dispatch(getUsers());
   }, []);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("newMessage", (message) => {
+        dispatch(addIncomingMessage(message));
+        dispatch(
+          updateLastMessageInSidebar({
+            ...message,
+            authUserId: authUser._id,
+          })
+        );
+      });
+    }
+    return () => {
+      if (socket) {
+        socket.off("newMessage");
+      }
+    };
+  }, [socket, dispatch]);
 
   const searchEverything = async (searhQuery) => {
     try {
@@ -251,17 +282,19 @@ export default function Sidebar() {
                             src=""
                             cursor="pointer"
                           />
-                          {onlineUsers.includes(data.user._id) && (
-                            <Box
-                              position="absolute"
-                              bottom={0}
-                              right={0}
-                              boxSize="10px"
-                              bg="green.400"
-                              borderRadius="full"
-                              border="2px solid white"
-                            />
-                          )}
+                          {console.log(onlineUsers)}
+                          {onlineUsers &&
+                            onlineUsers.includes(data.user._id) && (
+                              <Box
+                                position="absolute"
+                                bottom={0}
+                                right={0}
+                                boxSize="10px"
+                                bg="green.400"
+                                borderRadius="full"
+                                border="2px solid white"
+                              />
+                            )}
                         </Box>
                         <Box
                           borderTop={"1px solid"}

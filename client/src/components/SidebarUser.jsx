@@ -1,4 +1,5 @@
-import { Avatar, Box, Flex, Text, useColorModeValue } from "@chakra-ui/react";
+import { Avatar, Box, Flex, Text, useBreakpointValue, useColorModeValue } from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
 
 export default function SidebarUser({
   data,
@@ -6,9 +7,16 @@ export default function SidebarUser({
   dispatch,
   setSelectedUser,
 }) {
+  const isMobile = useBreakpointValue({ base: true, md: false });
+  const navigate = useNavigate();
   return (
     <Flex
-      onClick={() => dispatch(setSelectedUser(data.user))}
+      onClick={() => {
+        dispatch(setSelectedUser(data.user));
+        if (isMobile) {
+          navigate(`/chat/${data.user._id}`);
+        }
+      }}
       align="center"
       gap={3}
       _hover={{ bg: "gray.100", cursor: "pointer" }}
@@ -21,7 +29,7 @@ export default function SidebarUser({
           src=""
           cursor="pointer"
         />
-        {onlineUsers.includes(data.user._id) && (
+        {onlineUsers && onlineUsers.includes(data.user._id) && (
           <Box
             position="absolute"
             bottom={0}
@@ -54,8 +62,8 @@ export default function SidebarUser({
         )}
         {!data.lastMessage && (
           <Text fontWeight="normal" fontSize="sm" color="gray.500">
-          {data.user.bio}
-        </Text>
+            {data.user.bio}
+          </Text>
         )}
       </Box>
     </Flex>
