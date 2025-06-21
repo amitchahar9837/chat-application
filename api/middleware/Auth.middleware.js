@@ -8,6 +8,7 @@ dotenv.config();
 export const protectedRoute = async (req, res, next) => {
   try {
     const token = req.cookies.token;
+    console.log(token)
     if (!token) return errorHandler(res, 401, "Unauthorized");
 
     const decoded = jwt.verify(token, process.env.JWT_KEY);
