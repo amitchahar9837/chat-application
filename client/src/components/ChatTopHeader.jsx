@@ -25,12 +25,20 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { useDispatch } from "react-redux";
 import { resetMessages, setSelectedUser } from "../redux/slices/ChatSlice";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
-export default function ChatTopHeader({ user, isOnline, onDeleteChat }) {
+export default function ChatTopHeader({
+  user,
+  isOnline,
+  onDeleteChat,
+  isTyping,
+}) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const MotionText = motion.create(Text);
+
   return (
     <Flex
       bg="#F0F2F5"
@@ -43,7 +51,7 @@ export default function ChatTopHeader({ user, isOnline, onDeleteChat }) {
       {/* Left section: Avatar, name, online */}
       <Flex align="center" gap={3}>
         <Icon
-        display={{ base: "block", md: "none" }}
+          display={{ base: "block", md: "none" }}
           as={ArrowBackIcon}
           color="black"
           boxSize={5}
@@ -53,10 +61,22 @@ export default function ChatTopHeader({ user, isOnline, onDeleteChat }) {
         <Avatar size="sm" name={user.fullName} src={user.profilePic || ""} />
         <Box>
           <Text fontWeight="bold">{user.fullName}</Text>
-          {isOnline && (
+          {/* {isOnline && isTyping !== true && (
             <Text fontSize="sm" color="green.500">
               Online
             </Text>
+          )} */}
+          {isTyping && (
+            <MotionText
+              fontSize="sm"
+              color="green.500"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              transition={{ duration: 0.3 }}
+            >
+              Typing...
+            </MotionText>
           )}
         </Box>
       </Flex>
@@ -77,11 +97,13 @@ export default function ChatTopHeader({ user, isOnline, onDeleteChat }) {
           />
           <MenuList>
             <MenuItem>Contact Info</MenuItem>
-            <MenuItem onClick={() => {
-              dispatch(resetMessages());
-              dispatch(setSelectedUser(null));
-              isMobile && navigate('/')
-            }}>
+            <MenuItem
+              onClick={() => {
+                dispatch(resetMessages());
+                dispatch(setSelectedUser(null));
+                isMobile && navigate("/");
+              }}
+            >
               Close Chat
             </MenuItem>
             <MenuItem onClick={onOpen} color="red.500">

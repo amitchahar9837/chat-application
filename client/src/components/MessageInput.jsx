@@ -10,54 +10,71 @@ import {
 import { AddIcon } from "@chakra-ui/icons";
 import { FaPaperPlane } from "react-icons/fa";
 import { motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getUsers, sendMessage, updateLastMessageInSidebar } from "../redux/slices/ChatSlice";
+import {
+  sendMessage,
+  updateLastMessageInSidebar,
+} from "../redux/slices/ChatSlice";
 
-const MotionBox = motion(Box);
+const MotionBox = motion.create(Box);
 
 export default function MessageInput() {
   const { isOpen, onToggle } = useDisclosure();
-  const {authUser} = useSelector((state) => state.auth);
+  const { authUser } = useSelector((state) => state.auth);
   const { selectedUser } = useSelector((state) => state.chat);
   const [messageData, setMessageData] = useState({
     text: "",
     image: null,
   });
+  const socket = useSelector((state) => state.auth.socket);
   const dispatch = useDispatch();
+  const typingTimeoutRef = useRef(null);
 
-  const handleSendMessage =  () => {
+  const handleSendMessage = () => {
     if (!messageData.text.trim()) return;
 
     try {
       dispatch(sendMessage(messageData));
-      dispatch(updateLastMessageInSidebar({
-        text: messageData.text,
-        createdAt: new Date().toISOString(),
-        authUserId: authUser._id,
-        senderId: authUser._id,
-        receiverId: selectedUser._id,
-        sender: authUser,
-      }))
+      dispatch(
+        updateLastMessageInSidebar({
+          text: messageData.text,
+          createdAt: new Date().toISOString(),
+          authUserId: authUser._id,
+          senderId: authUser._id,
+          receiverId: selectedUser._id,
+          sender: authUser,
+          receiver: selectedUser,
+        })
+      );
       setMessageData({ text: "", image: null });
     } catch (error) {
       console.error("Failed to send message:", error);
     }
   };
 
-  //   useEffect(() => {
-  //   const handleKeyUp = (e) => {
-  //     if (e.key === "Enter" && messageData.text.trim()) {
-  //       handleSendMessage();
-  //     }
-  //   };
+  const handleTyping = () => {
+    if (!socket || !selectedUser) return;
 
-  //   window.addEventListener("keyup", handleKeyUp);
+    // Emit typing event immediately
+    socket.emit("typing", {
+      receiverId: selectedUser._id,
+      senderId: authUser._id,
+    });
 
-  //   return () => {
-  //     window.removeEventListener("keyup", handleKeyUp);
-  //   };
-  // }, [messageData.text, handleSendMessage]);
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set a new 3-second timer to emit stop_typing
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stop_typing", {
+        receiverId: selectedUser._id,
+        senderId: authUser._id,
+      });
+    }, 3000);
+  };
 
   return (
     <Box bg="#F0F2F5" p={3}>
@@ -121,9 +138,10 @@ export default function MessageInput() {
             borderRadius="full"
             flex="1"
             value={messageData.text}
-            onChange={(e) =>
-              setMessageData((prev) => ({ ...prev, text: e.target.value }))
-            }
+            onChange={(e) => {
+              setMessageData((prev) => ({ ...prev, text: e.target.value }));
+              handleTyping();
+            }}
           />
 
           <IconButton

@@ -1,7 +1,7 @@
-export const formatTime = (isoString) => {
-  const date = new Date(isoString);
+export const formatTime = (dateString) => {
+  const date = new Date(dateString);
   return date.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });

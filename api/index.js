@@ -14,7 +14,6 @@ const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:5173`;
 
 app.use(express.json());
 app.use(cookieParser());
-console.log(CLIENT_URL)
 
 app.use(cors({
       origin: CLIENT_URL,

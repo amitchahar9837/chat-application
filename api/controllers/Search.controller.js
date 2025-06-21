@@ -55,14 +55,17 @@ export const searchEverything = async (req, res) => {
     }).select("_id fullName profilePic");
 
     //Full Chat list with last messages
-    const fullChatList = lastMessages.map((item) => {
-      const user = chatUsers.find((u) => u._id.toString() === item.userId);
-      return {
-        user,
-        lastMessage: item.lastMessage,
-        updatedAt: item.updatedAt,
-      };
-    });
+    const fullChatList = lastMessages
+      .map((item) => {
+        const user = chatUsers.find((u) => u._id.toString() === item.userId);
+        if (!user) return null;
+        return {
+          user,
+          lastMessage: item.lastMessage,
+          updatedAt: item.updatedAt,
+        };
+      })
+      .filter(Boolean);
 
     // 2️⃣ From all other users (not chatted with yet)
     const otherUsers = await User.find({

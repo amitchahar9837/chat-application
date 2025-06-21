@@ -75,10 +75,18 @@ const chatSlice = createSlice({
       }
     },
     updateLastMessageInSidebar: (state, action) => {
-      const { senderId, receiverId, text, createdAt, authUserId, sender } =
-        action.payload;
+      const {
+        senderId,
+        receiverId,
+        text,
+        createdAt,
+        authUserId,
+        sender,
+        receiver,
+      } = action.payload;
 
       const targetId = senderId === authUserId ? receiverId : senderId;
+      const targetUser = senderId === authUserId ? receiver : sender;
 
       const userIndex = state.users.findIndex((u) => u.user._id === targetId);
       if (userIndex !== -1) {
@@ -86,13 +94,31 @@ const chatSlice = createSlice({
         state.users[userIndex].updatedAt = createdAt;
       } else {
         state.users.unshift({
-          user: { _id: targetId, fullName: sender.fullName, profilePic: sender.profilePic },
+          user: {
+            _id: targetUser._id,
+            fullName: targetUser.fullName,
+            profilePic: targetUser.profilePic,
+          },
           lastMessage: text,
           updatedAt: createdAt,
         });
       }
     },
-    resetMessages:(state) =>{
+    markMessagesAsSeen: (state, action) => {
+      const { messageIds } = action.payload;
+
+      state.messages = state.messages.map((msg) =>
+        messageIds.includes(msg._id) ? { ...msg, status: "seen" } : msg
+      );
+    },
+    updateMessageStatus: (state, action) => {
+      const updatedMsg = action.payload;
+
+      state.messages = state.messages.map((msg) =>
+        msg._id === updatedMsg._id ? { ...msg, status: updatedMsg.status } : msg
+      );
+    },
+    resetMessages: (state) => {
       state.messages = [];
     },
     resetChatState: () => initialState,
@@ -143,5 +169,7 @@ export const {
   resetChatState,
   updateLastMessageInSidebar,
   resetMessages,
+  markMessagesAsSeen,
+  updateMessageStatus,
 } = chatSlice.actions;
 export default chatSlice.reducer;

@@ -1,10 +1,17 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import ChatTopHeader from "./ChatTopHeader";
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Flex, Icon, Text } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import ChatSkeleton from "./ChatSkeleton";
 import MessageInput from "./MessageInput";
-import { addIncomingMessage, getMessages, getUsers, updateLastMessageInSidebar } from "../redux/slices/ChatSlice";
+import { BiCheck, BiCheckDouble } from "react-icons/bi";
+import {
+  addIncomingMessage,
+  getMessages,
+  markMessagesAsSeen,
+  updateLastMessageInSidebar,
+  updateMessageStatus,
+} from "../redux/slices/ChatSlice";
 import { formatTime } from "../utils/formatTime";
 
 export default function ChatContainer() {
@@ -15,10 +22,20 @@ export default function ChatContainer() {
   const dispatch = useDispatch();
   const messagesContainerRef = React.useRef(null);
   const socket = useSelector((state) => state.auth.socket);
+  const [isTyping, setIsTyping] = React.useState(false);
 
   useEffect(() => {
     if (selectedUser) {
       dispatch(getMessages(selectedUser._id));
+    }
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (selectedUser && socket) {
+      socket.emit("mark_as_seen", {
+        senderId: selectedUser._id,
+        receiverId: authUser._id,
+      });
     }
   }, [selectedUser]);
 
@@ -29,49 +46,62 @@ export default function ChatContainer() {
     }
   }, [messages]);
 
+  const handleNewMessage = useCallback(
+    (message) => {
+      dispatch(addIncomingMessage(message));
+      dispatch(
+        updateLastMessageInSidebar({ ...message, authUserId: authUser._id })
+      );
+    },
+    [dispatch, authUser?._id]
+  );
+
+  const handleSeenUpdate = useCallback(
+    ({ from, messageIds }) => {
+      dispatch(markMessagesAsSeen({ from, messageIds }));
+    },
+    [dispatch]
+  );
+
+  const handleStatusUpdate = useCallback(
+    (updatedMessage) => {
+      dispatch(updateMessageStatus(updatedMessage));
+    },
+    [dispatch]
+  );
+
   useEffect(() => {
-      if (socket) {
-        socket.on("newMessage", (message) => {
-          dispatch(addIncomingMessage(message));
-          dispatch(
-            updateLastMessageInSidebar({
-              ...message,
-              authUserId: authUser._id,
-            })
-          );
-        });
+    if (!socket) return;
+
+    socket.on("newMessage", handleNewMessage);
+    socket.on("message_seen", handleSeenUpdate);
+    socket.on("message_status_update", handleStatusUpdate);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+      socket.off("message_seen", handleSeenUpdate);
+      socket.off("message_status_update", handleStatusUpdate);
+    };
+  }, [socket, handleNewMessage, handleSeenUpdate, handleStatusUpdate]);
+
+  useEffect(() => {
+    socket?.on("typing", ({ senderId }) => {
+      if (senderId === selectedUser?._id) {
+        setIsTyping(true);
       }
-      return () => {
-        if (socket) {
-          socket.off("newMessage");
-        }
-      };
-    }, [socket, dispatch]);
+    });
 
-  // useEffect(() => {
-  //   if (!socket) {
-  //     return;
-  //   }
+    socket?.on("stop_typing", ({ senderId }) => {
+      if (senderId === selectedUser?._id) {
+        setIsTyping(false);
+      }
+    });
 
-  //   const handleConnect = () => {
-  //     socket.on("newMessage", (message) => {
-  //       dispatch(addIncomingMessage(message));
-  //       dispatch(getUsers())
-  //     });
-  //   };
-  //   // If already connected, set up immediately
-  //   if (socket.connected) {
-  //     handleConnect();
-  //   } else {
-  //     socket.on("connect", handleConnect);
-  //   }
-
-  //   // Cleanup
-  //   return () => {
-  //     socket.off("connect", handleConnect);
-  //     socket.off("newMessage");
-  //   };
-  // }, [socket]);
+    return () => {
+      socket?.off("typing");
+      socket?.off("stop_typing");
+    };
+  }, [selectedUser]);
 
   return (
     <Box
@@ -81,63 +111,66 @@ export default function ChatContainer() {
       height="100dvh"
       width="100%"
       borderLeft="1px solid #ccc"
+      background={
+        'linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url("https://images.unsplash.com/photo-1623150502742-6a849aa94be4?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")'
+      }
+      backgroundSize="cover"
+      backgroundPosition="center"
+      backgroundRepeat="no-repeat"
     >
       <ChatTopHeader
         user={{ fullName: selectedUser.fullName, profilePic: "" }}
         isOnline={onlineUsers && onlineUsers.includes(selectedUser._id)}
         onDeleteChat={() => console.log("Chat deleted")}
+        isTyping={isTyping}
       />
       {isMessagesLoading && <ChatSkeleton />}
-      <Box
+      <Flex
         p={4}
         overflowY="auto"
         h="calc(100% - 130px)"
-        direction="column-reverse"
+        direction="column"
+        gap={3}
         ref={messagesContainerRef}
-      >        
-        {messages.map((message, index) => (
+      >
+        {messages.map((message) => (
           <Box
-            key={index}
-            mb={4}
-            display="flex"
-            flexDirection="column"
+            key={message._id}
+            bg={message.senderId === authUser._id ? "green.100" : "white"}
+            p={3}
+            borderRadius="md"
+            maxWidth="70%"
             alignSelf={
-              message.senderId === authUser._id ? "flex-start" : "flex-end"
+              message.senderId === authUser._id ? "flex-end" : "flex-start"
             }
           >
-            <Box
-              bg={message.senderId === authUser._id ? "blue.100" : "gray.100"}
-              p={3}
-              borderRadius="md"
-              maxWidth="70%"
-              alignSelf={
-                message.senderId === authUser._id ? "flex-end" : "flex-start"
-              }
-            >
-              <Box
-                bg={message.senderId === authUser._id ? "blue.100" : "gray.100"}
-                borderRadius="md"
-                width={"100%"}
-                alignSelf={
-                  message.senderId === authUser._id ? "flex-end" : "flex-start"
-                }
-              >
-                {message.text}
-              </Box>
-              <Text
-                alignSelf={
-                  message.senderId === authUser._id ? "flex-end" : "flex-start"
-                }
-                fontSize="xs"
-                color="gray.500"
-                mt={1}
-              >
+            {/* Message Text */}
+            <Text fontSize="sm" whiteSpace="pre-wrap">
+              {message.text}
+            </Text>
+
+            {/* Time + Tick Status */}
+            <Flex mt={1} justify="flex-end" align="center" gap={1}>
+              <Text fontSize="xs" color="gray.500">
                 {formatTime(message.createdAt)}
               </Text>
-            </Box>
+              {message.senderId === authUser._id && (
+                <>
+                  {message.status === "sent" && (
+                    <BiCheck size={16} color="gray" />
+                  )}
+                  {message.status === "delivered" && (
+                    <BiCheckDouble size={16} color="gray" />
+                  )}
+                  {message.status === "seen" && (
+                    <BiCheckDouble size={16} color="blue" />
+                  )}
+                </>
+              )}
+            </Flex>
           </Box>
         ))}
-      </Box>
+      </Flex>
       <MessageInput />
     </Box>
   );

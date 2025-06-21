@@ -1,10 +1,4 @@
-import {
-  ArrowBackIcon,
-  CloseIcon,
-  Icon,
-  SearchIcon,
-  SmallCloseIcon,
-} from "@chakra-ui/icons";
+import { ArrowBackIcon, Icon, SearchIcon } from "@chakra-ui/icons";
 import {
   Avatar,
   Box,
@@ -33,7 +27,7 @@ import {
   useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addIncomingMessage,
@@ -65,32 +59,40 @@ export default function Sidebar() {
   useEffect(() => {
     dispatch(getUsers());
   }, []);
+  const handleNewMessage = useCallback(
+    (message) => {
+      dispatch(addIncomingMessage(message));
+      dispatch(
+        updateLastMessageInSidebar({
+          ...message,
+          authUserId: authUser._id,
+        })
+      );
+
+      socket.emit("message_delivered", {
+        messageId: message._id,
+        senderId: message.senderId,
+        receiverId: message.receiverId,
+      });
+    },
+    [dispatch, authUser?._id, socket]
+  );
 
   useEffect(() => {
-    if (socket) {
-      socket.on("newMessage", (message) => {
-        dispatch(addIncomingMessage(message));
-        dispatch(
-          updateLastMessageInSidebar({
-            ...message,
-            authUserId: authUser._id,
-          })
-        );
-      });
-    }
+    if (!socket) return;
+
+    socket.on("newMessage", handleNewMessage);
+
     return () => {
-      if (socket) {
-        socket.off("newMessage");
-      }
+      socket.off("newMessage", handleNewMessage);
     };
-  }, [socket, dispatch]);
+  }, [socket, handleNewMessage]);
 
   const searchEverything = async (searhQuery) => {
     try {
       const response = await axiosInstance.get(`/search?q=${searhQuery}`);
       setSearchResult(response.data);
     } catch (error) {
-      console.log(error);
     } finally {
       setSearchLoading(false);
     }
@@ -282,7 +284,6 @@ export default function Sidebar() {
                             src=""
                             cursor="pointer"
                           />
-                          {console.log(onlineUsers)}
                           {onlineUsers &&
                             onlineUsers.includes(data.user._id) && (
                               <Box

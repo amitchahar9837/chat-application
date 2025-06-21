@@ -1,13 +1,14 @@
 import Message from "../models/message.model.js";
 import { errorHandler } from "../utils/errorHandler.js";
 import cloudinary from "../lib/cloudinary.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import { getReceiverSocketId, io, userSocketMap } from "../lib/socket.js";
 import User from "../models/user.model.js";
 
 //HANDLER TO GET USERS FOR SIDEBAR
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
+    // Fetch messages for the sidebar
     const messages = await Message.find({
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
     })
@@ -15,8 +16,34 @@ export const getUsersForSidebar = async (req, res) => {
       .populate("senderId", "fullName profilePic")
       .populate("receiverId", "fullName profilePic");
 
-    const chatMap = new Map();
+    // Identify messages which are received by logged in user and are not yet delivered
+    const undeliveredMessages = messages.filter(
+      (msg) =>
+        msg.receiverId._id.equals(loggedInUserId) &&
+        !msg.delivered
+    );
 
+    // Update the 'delivered' flag in the database for those messages
+    const undeliveredIds = undeliveredMessages.map((msg) => msg._id);
+    await Message.updateMany(
+      { _id: { $in: undeliveredIds } },
+      { $set: { delivered: true } }
+    );
+
+    // Emit socket events to the corresponding senders
+    undeliveredMessages.forEach((msg) => {
+      // Assuming you have a method to get sender's socket id, e.g., getSocketId()
+      const senderSocketId = userSocketMap[msg.senderId._id.toString()];
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("message_delivered", {
+          messageId: msg._id,
+          receiverId: loggedInUserId,
+        });
+      }
+    });
+
+    // Build the sidebar chat list
+    const chatMap = new Map();
     messages.forEach((msg) => {
       const otherUser = msg.senderId._id.equals(loggedInUserId)
         ? msg.receiverId
@@ -24,7 +51,7 @@ export const getUsersForSidebar = async (req, res) => {
       if (!chatMap.has(otherUser._id.toString())) {
         chatMap.set(otherUser._id.toString(), {
           user: otherUser,
-          lastMessage: msg.text || "📷 Image",
+          lastMessage: msg.text,
           updatedAt: msg.updatedAt,
         });
       }
@@ -38,6 +65,7 @@ export const getUsersForSidebar = async (req, res) => {
     errorHandler(res, error.statusCode, error.message);
   }
 };
+
 
 //HANDLER TO GET MESSAGES BETWEEN TWO USERS
 export const getMessages = async (req, res) => {
@@ -78,6 +106,7 @@ export const sendMessage = async (req, res) => {
       receiverId,
       text,
       image: imageUrl,  
+      status: "sent", 
     });
 
     newMessage.save().then((savedMessage) => {
