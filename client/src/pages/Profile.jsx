@@ -13,8 +13,6 @@ const Profile = () => {
     const navigate = useNavigate();
     const user = useSelector(state => state.auth.user)
 
-    console.log(user)
-
     return (
         <Flex bg="#1b1c24" h="100vh" justify="center" align="center" direction="column" gap="10">
             <Box w={{ base: '80vw', md: '50vw', lg:'auto' }} gap="10" display="flex" flexDirection="column">
