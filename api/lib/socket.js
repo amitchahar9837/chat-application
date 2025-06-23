@@ -39,6 +39,7 @@ io.on("connection", (socket) => {
 
   //message socket events ----
   socket.on("message_delivered", async ({ messageId }) => {
+    console.log('message deliverd')
     const updated = await Message.findByIdAndUpdate(
       messageId,
       { status: "delivered" },
@@ -49,6 +50,7 @@ io.on("connection", (socket) => {
     }
   });
   socket.on("mark_as_seen", async ({ senderId, receiverId }) => {
+    console.log('mark_as_seen called')
     await Message.updateMany(
       { senderId, receiverId, status: { $ne: "seen" } },
       { $set: { status: "seen" } }
