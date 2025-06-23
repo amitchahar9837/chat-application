@@ -23,6 +23,8 @@ export default function ChatContainer() {
   const messagesContainerRef = React.useRef(null);
   const socket = useSelector((state) => state.auth.socket);
   const [isTyping, setIsTyping] = React.useState(false);
+  const [seenEmitted, setSeenEmitted] = React.useState(false);
+  const lastMessageRef = React.useRef(null);
 
   useEffect(() => {
     if (selectedUser) {
@@ -103,6 +105,37 @@ export default function ChatContainer() {
     };
   }, [selectedUser]);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          messages.length > 0 &&
+          messages[messages.length - 1].senderId === selectedUser._id &&
+          !seenEmitted
+        ) {
+          socket.emit("mark_as_seen", {
+            senderId: selectedUser._id,
+            receiverId: authUser._id,
+          });
+          setSeenEmitted(true);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (lastMessageRef.current) {
+      observer.observe(lastMessageRef.current);
+    }
+
+    return () => {
+      if (lastMessageRef.current) {
+        observer.unobserve(lastMessageRef.current);
+      }
+    };
+  }, [messages, selectedUser]);
+
   return (
     <Box
       flex="1"
@@ -133,9 +166,10 @@ export default function ChatContainer() {
         gap={3}
         ref={messagesContainerRef}
       >
-        {messages.map((message) => (
+        {messages.map((message, idx) => (
           <Box
             key={message._id}
+            ref={idx === messages.length - 1 ? lastMessageRef : null}
             bg={message.senderId === authUser._id ? "green.100" : "white"}
             p={3}
             borderRadius="md"

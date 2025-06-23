@@ -4,12 +4,12 @@ export default function ChatSkeleton() {
   return (
     <VStack
       w={"100%"}
+      h={'calc(100% - 130px)'}
       spacing={4}
       align="stretch"
       px={4}
       py={6}
       flex="1"
-      overflowY="auto"
     >
       {/* Message skeletons */}
       {[...Array(10)].map((_, i) => (

@@ -11,7 +11,6 @@ import {
   TabPanels,
   TabPanel,
 } from "@chakra-ui/react";
-import React from "react";
 import Background from "../assets/login2.png";
 import { Login, Signup } from "../components";
 
