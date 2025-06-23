@@ -25,13 +25,17 @@ export default function ChatContainer() {
   const [isTyping, setIsTyping] = React.useState(false);
   const [seenEmitted, setSeenEmitted] = React.useState(false);
   const lastMessageRef = React.useRef(null);
+  const isSocketListenersAttached = React.useRef(false);
 
   useEffect(() => {
     if (selectedUser) {
-      setSeenEmitted(false);
       dispatch(getMessages(selectedUser._id));
     }
   }, [selectedUser]);
+
+  useEffect(() => {
+    setSeenEmitted(false);
+  }, [selectedUser?._id]);
 
   useEffect(() => {
     if (selectedUser && socket) {
@@ -54,13 +58,14 @@ export default function ChatContainer() {
   }, [messages]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || isSocketListenersAttached.current) return;
 
     const handleNewMessage = (message) => {
       dispatch(addIncomingMessage(message));
       dispatch(
         updateLastMessageInSidebar({ ...message, authUserId: authUser._id })
       );
+
       if (message.receiverId === authUser._id) {
         socket.emit("message_delivered", {
           messageId: message._id,
@@ -69,9 +74,11 @@ export default function ChatContainer() {
         });
       }
     };
+
     const handleStatusUpdate = (updatedMessage) => {
       dispatch(updateMessageStatus(updatedMessage));
     };
+
     const handleSeenUpdate = (from, messageIds) => {
       dispatch(markMessagesAsSeen({ from, messageIds }));
     };
@@ -80,10 +87,13 @@ export default function ChatContainer() {
     socket.on("message_seen", handleSeenUpdate);
     socket.on("message_status_update", handleStatusUpdate);
 
+    isSocketListenersAttached.current = true;
+
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("message_seen", handleSeenUpdate);
       socket.off("message_status_update", handleStatusUpdate);
+      isSocketListenersAttached.current = false;
     };
   }, [socket, authUser._id]);
 
@@ -123,19 +133,16 @@ export default function ChatContainer() {
           setSeenEmitted(true);
         }
       },
-      { threshold: 1.0 }
+      { threshold: 0.9 } // use 0.9 instead of 1.0 to make it more responsive
     );
 
-    if (lastMessageRef.current) {
-      observer.observe(lastMessageRef.current);
-    }
+    const lastNode = lastMessageRef.current;
+    if (lastNode) observer.observe(lastNode);
 
     return () => {
-      if (lastMessageRef.current) {
-        observer.unobserve(lastMessageRef.current);
-      }
+      if (lastNode) observer.unobserve(lastNode);
     };
-  }, [messages, selectedUser]);
+  }, [messages, selectedUser, seenEmitted]);
 
   return (
     <Box
