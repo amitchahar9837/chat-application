@@ -61,6 +61,13 @@ export default function ChatContainer() {
       dispatch(
         updateLastMessageInSidebar({ ...message, authUserId: authUser._id })
       );
+      if (message.receiverId === authUser._id) {
+        socket.emit("message_delivered", {
+          messageId: message._id,
+          senderId: message.senderId,
+          receiverId: message.receiverId,
+        });
+      }
     };
     const handleStatusUpdate = (updatedMessage) => {
       dispatch(updateMessageStatus(updatedMessage));
@@ -152,11 +159,7 @@ export default function ChatContainer() {
         isTyping={isTyping}
       />
       {isMessagesLoading && (
-        <Box
-          w={"100%"}
-          h={"calc(100% - 130px)"}
-          overflowY={'auto'}
-        >
+        <Box w={"100%"} h={"calc(100% - 130px)"} overflowY={"auto"}>
           <ChatSkeleton />
         </Box>
       )}
