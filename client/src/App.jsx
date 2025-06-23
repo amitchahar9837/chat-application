@@ -10,6 +10,7 @@ import { ChatContainer } from "./components";
 
 export default function App() {
   const { isCheckingAuth, authUser } = useSelector((state) => state.auth);
+  const {selectedUser} = useSelector(state =>state.chat)
   const dispatch = useDispatch();
   const isMobile = useBreakpointValue({ base: true, md: false });
 
@@ -36,7 +37,7 @@ export default function App() {
         {isMobile && (
           <Route
             path="/chat/:userId"
-            element={authUser ? <ChatContainer /> : <Navigate to="/auth" />}
+            element={authUser && selectedUser ? <ChatContainer /> : <Navigate to="/" />}
           />
         )}
         <Route
