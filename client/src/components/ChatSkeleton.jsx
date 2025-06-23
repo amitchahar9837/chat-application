@@ -12,7 +12,7 @@ export default function ChatSkeleton() {
       flex="1"
     >
       {/* Message skeletons */}
-      {[...Array(10)].map((_, i) => (
+      {[...Array(8)].map((_, i) => (
         <Flex key={i} justify={i % 2 === 0 ? "flex-start" : "flex-end"}>
           <Box
             maxW="40%"

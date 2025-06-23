@@ -28,6 +28,7 @@ export default function ChatContainer() {
 
   useEffect(() => {
     if (selectedUser) {
+      setSeenEmitted(false);
       dispatch(getMessages(selectedUser._id));
     }
   }, [selectedUser]);
@@ -48,15 +49,9 @@ export default function ChatContainer() {
     }
   }, [messages]);
 
-  const handleNewMessage = useCallback(
-    (message) => {
-      dispatch(addIncomingMessage(message));
-      dispatch(
-        updateLastMessageInSidebar({ ...message, authUserId: authUser._id })
-      );
-    },
-    [dispatch, authUser?._id]
-  );
+  useEffect(() => {
+    lastMessageRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSeenUpdate = useCallback(
     ({ from, messageIds }) => {
@@ -75,6 +70,13 @@ export default function ChatContainer() {
   useEffect(() => {
     if (!socket) return;
 
+    const handleNewMessage = (message) => {
+      dispatch(addIncomingMessage(message));
+      dispatch(
+        updateLastMessageInSidebar({ ...message, authUserId: authUser._id })
+      );
+    };
+
     socket.on("newMessage", handleNewMessage);
     socket.on("message_seen", handleSeenUpdate);
     socket.on("message_status_update", handleStatusUpdate);
@@ -84,7 +86,7 @@ export default function ChatContainer() {
       socket.off("message_seen", handleSeenUpdate);
       socket.off("message_status_update", handleStatusUpdate);
     };
-  }, [socket]);
+  }, [socket, authUser._id]);
 
   useEffect(() => {
     socket?.on("typing", ({ senderId }) => {
