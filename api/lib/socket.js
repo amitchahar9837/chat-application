@@ -1,22 +1,14 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
-import dotenv from "dotenv";
 import Message from "../models/message.model.js";
-dotenv.config();
 
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
 const app = express();
 
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: CLIENT_URL,
-    credentials: true,
-  },
-});
+const io = new Server(server);
 
 export function getReceiverSocketId(userId) {
   return userSocketMap[userId];

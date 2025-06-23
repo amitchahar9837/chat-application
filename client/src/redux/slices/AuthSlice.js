@@ -4,9 +4,7 @@ import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 
 const BASE_URL =
-  import.meta.env.MODE === "development" ? "http://localhost:3001" : "/";
-// const BASE_URL =
-//   import.meta.env.MODE === "development" ? "http://192.168.1.133:3001" : "/";
+  import.meta.env.MODE === "development" ? "http://localhost:3001" : '/';
 
 let socket = null;
 
