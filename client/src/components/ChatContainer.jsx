@@ -151,7 +151,15 @@ export default function ChatContainer() {
         onDeleteChat={() => console.log("Chat deleted")}
         isTyping={isTyping}
       />
-      {isMessagesLoading && <ChatSkeleton />}
+      {isMessagesLoading && (
+        <Box
+          w={"100%"}
+          h={"calc(100% - 130px)"}
+          overflowY={'auto'}
+        >
+          <ChatSkeleton />
+        </Box>
+      )}
       {!isMessagesLoading && messages.length > 0 && (
         <Flex
           p={4}
