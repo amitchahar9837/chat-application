@@ -84,7 +84,7 @@ export default function ChatContainer() {
       socket.off("message_seen", handleSeenUpdate);
       socket.off("message_status_update", handleStatusUpdate);
     };
-  }, [socket, handleNewMessage, handleSeenUpdate, handleStatusUpdate]);
+  }, [socket]);
 
   useEffect(() => {
     socket?.on("typing", ({ senderId }) => {

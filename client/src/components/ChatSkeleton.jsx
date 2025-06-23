@@ -4,7 +4,7 @@ export default function ChatSkeleton() {
   return (
     <VStack
       w={"100%"}
-      h={'calc(100% - 130px)'}
+      h={'calc(100dvh - 130px)'}
       spacing={4}
       align="stretch"
       px={4}
