@@ -53,20 +53,6 @@ export default function ChatContainer() {
     lastMessageRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSeenUpdate = useCallback(
-    ({ from, messageIds }) => {
-      dispatch(markMessagesAsSeen({ from, messageIds }));
-    },
-    [dispatch]
-  );
-
-  const handleStatusUpdate = useCallback(
-    (updatedMessage) => {
-      dispatch(updateMessageStatus(updatedMessage));
-    },
-    [dispatch]
-  );
-
   useEffect(() => {
     if (!socket) return;
 
@@ -75,6 +61,12 @@ export default function ChatContainer() {
       dispatch(
         updateLastMessageInSidebar({ ...message, authUserId: authUser._id })
       );
+    };
+    const handleStatusUpdate = (updatedMessage) => {
+      dispatch(updateMessageStatus(updatedMessage));
+    };
+    const handleSeenUpdate = (from, messageIds) => {
+      dispatch(markMessagesAsSeen({ from, messageIds }));
     };
 
     socket.on("newMessage", handleNewMessage);
@@ -160,53 +152,55 @@ export default function ChatContainer() {
         isTyping={isTyping}
       />
       {isMessagesLoading && <ChatSkeleton />}
-      <Flex
-        p={4}
-        overflowY="auto"
-        h="calc(100% - 130px)"
-        direction="column"
-        gap={3}
-        ref={messagesContainerRef}
-      >
-        {messages.map((message, idx) => (
-          <Box
-            key={message._id}
-            ref={idx === messages.length - 1 ? lastMessageRef : null}
-            bg={message.senderId === authUser._id ? "green.100" : "white"}
-            p={3}
-            borderRadius="md"
-            maxWidth="70%"
-            alignSelf={
-              message.senderId === authUser._id ? "flex-end" : "flex-start"
-            }
-          >
-            {/* Message Text */}
-            <Text fontSize="sm" whiteSpace="pre-wrap">
-              {message.text}
-            </Text>
-
-            {/* Time + Tick Status */}
-            <Flex mt={1} justify="flex-end" align="center" gap={1}>
-              <Text fontSize="xs" color="gray.500">
-                {formatTime(message.createdAt)}
+      {!isMessagesLoading && messages.length > 0 && (
+        <Flex
+          p={4}
+          overflowY="auto"
+          h="calc(100% - 130px)"
+          direction="column"
+          gap={3}
+          ref={messagesContainerRef}
+        >
+          {messages.map((message, idx) => (
+            <Box
+              key={message._id}
+              ref={idx === messages.length - 1 ? lastMessageRef : null}
+              bg={message.senderId === authUser._id ? "green.100" : "white"}
+              p={3}
+              borderRadius="md"
+              maxWidth="70%"
+              alignSelf={
+                message.senderId === authUser._id ? "flex-end" : "flex-start"
+              }
+            >
+              {/* Message Text */}
+              <Text fontSize="sm" whiteSpace="pre-wrap">
+                {message.text}
               </Text>
-              {message.senderId === authUser._id && (
-                <>
-                  {message.status === "sent" && (
-                    <BiCheck size={16} color="gray" />
-                  )}
-                  {message.status === "delivered" && (
-                    <BiCheckDouble size={16} color="gray" />
-                  )}
-                  {message.status === "seen" && (
-                    <BiCheckDouble size={16} color="blue" />
-                  )}
-                </>
-              )}
-            </Flex>
-          </Box>
-        ))}
-      </Flex>
+
+              {/* Time + Tick Status */}
+              <Flex mt={1} justify="flex-end" align="center" gap={1}>
+                <Text fontSize="xs" color="gray.500">
+                  {formatTime(message.createdAt)}
+                </Text>
+                {message.senderId === authUser._id && (
+                  <>
+                    {message.status === "sent" && (
+                      <BiCheck size={16} color="gray" />
+                    )}
+                    {message.status === "delivered" && (
+                      <BiCheckDouble size={16} color="gray" />
+                    )}
+                    {message.status === "seen" && (
+                      <BiCheckDouble size={16} color="blue" />
+                    )}
+                  </>
+                )}
+              </Flex>
+            </Box>
+          ))}
+        </Flex>
+      )}
       <MessageInput />
     </Box>
   );
