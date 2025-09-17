@@ -36,8 +36,7 @@ export const searchEverything = async (req, res) => {
         if (!chatMap.has(otherUserId)) {
           chatMap.set(otherUserId, {
             userId: otherUserId,
-            lastMessage: msg.text || "📷 Image",
-            updatedAt: msg.updatedAt,
+            lastMessage: msg
           });
         }
       });

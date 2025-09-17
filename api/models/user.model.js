@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
       bio:{
             type:String,
             required:false,
-            default:"Hey there! I am using ChatApp",
+            default:"Hey there! I am using GupShup",
       }
 })
 

@@ -12,7 +12,7 @@ export const getUsersForSidebar = async (req, res) => {
     const messages = await Message.find({
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
     })
-      .sort({ updatedAt: -1 })
+      .sort({ createdAt: -1 })
       .populate("senderId", "fullName profilePic")
       .populate("receiverId", "fullName profilePic");
 
@@ -33,7 +33,7 @@ export const getUsersForSidebar = async (req, res) => {
     // Emit socket events to the corresponding senders
     undeliveredMessages.forEach((msg) => {
       // Assuming you have a method to get sender's socket id, e.g., getSocketId()
-      const senderSocketId = userSocketMap[msg.senderId._id.toString()];
+      const senderSocketId = userSocketMap[msg.senderId._id];
       if (senderSocketId) {
         io.to(senderSocketId).emit("message_delivered", {
           messageId: msg._id,
@@ -51,8 +51,7 @@ export const getUsersForSidebar = async (req, res) => {
       if (!chatMap.has(otherUser._id.toString())) {
         chatMap.set(otherUser._id.toString(), {
           user: otherUser,
-          lastMessage: msg.text,
-          updatedAt: msg.updatedAt,
+          lastMessage: msg
         });
       }
     });
@@ -93,6 +92,7 @@ export const sendMessage = async (req, res) => {
     const senderId = req.user._id;
 
     const sender =  await User.findById(senderId).select("fullName profilePic");
+    const receiver =  await User.findById(receiverId).select("fullName profilePic");
 
     let imageUrl;
     if (image) {
@@ -113,9 +113,9 @@ export const sendMessage = async (req, res) => {
       const receiverSocketId = getReceiverSocketId(receiverId);
 
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("newMessage", {...savedMessage._doc, sender }); 
+        io.to(receiverSocketId).emit("newMessage", {message:savedMessage, sender, receiver }); 
       }
-      res.status(201).json(savedMessage);
+      res.status(201).json({message:savedMessage, sender, receiver});
     });
   } catch (error) {
     errorHandler(res, error.statusCode, error.message);
