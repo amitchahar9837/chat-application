@@ -18,6 +18,8 @@ export default function SidebarUser({
 }) {
   const isMobile = useBreakpointValue({ base: true, md: false });
   const navigate = useNavigate();
+  const TextColor = useColorModeValue("gray.600", "gray.400");
+  const BorderColor = useColorModeValue("gray.100", "gray.700")
   return (
     <Flex
       onClick={() => {
@@ -57,7 +59,7 @@ export default function SidebarUser({
         py={2}
         display={"flex"}
         flexDir={"column"}
-        borderColor={useColorModeValue("gray.100", "gray.700")}
+        borderColor={BorderColor}
       >
         <Text fontWeight="medium">{data.user.fullName}</Text>
         <Flex alignItems={"center"} gap={1}>
@@ -75,10 +77,13 @@ export default function SidebarUser({
           {data.lastMessage && (
             <Text
               fontSize="sm"
-              color={useColorModeValue("gray.600", "gray.400")}
+              color={TextColor}
               noOfLines={1}
             >
-              {data.lastMessage.text}
+              {
+                data.lastMessage.image ? "📸 Photo" : 
+                data.lastMessage.text
+              }
             </Text>
           )}
         </Flex>

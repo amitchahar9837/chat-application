@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from "react";
 import ChatTopHeader from "./ChatTopHeader";
-import { Box, Flex, Icon, Text } from "@chakra-ui/react";
+import { Box, Flex, Icon, Image, Text } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import ChatSkeleton from "./ChatSkeleton";
 import MessageInput from "./MessageInput";
@@ -13,8 +13,14 @@ import {
   updateMessageStatus,
 } from "../redux/slices/ChatSlice";
 import { formatTime } from "../utils/formatTime";
+import FilePreview from "./FilePreview";
+// const BASE_URL =
+// "https://res.cloudinary.com/developer-amit-1718/image/upload/v1758108384/yqxxcbjvanejige62rdz.png";
+const BASE_URL = "https://res.cloudinary.com/developer-amit-1718/image/upload";
 
 export default function ChatContainer() {
+  const [image, setImage] = React.useState(null);
+  const [showPreview, setShowPreview] = React.useState(false);
   const selectedUser = useSelector((state) => state.chat.selectedUser);
   const onlineUsers = useSelector((state) => state.auth.onlineUsers);
   const { isMessagesLoading, messages } = useSelector((state) => state.chat);
@@ -36,16 +42,24 @@ export default function ChatContainer() {
 
   const normalizeId = (val) => (val && typeof val === "object" ? val._id : val);
 
+  function togglePreview() {
+    setShowPreview((prev) => !prev);
+  }
+  function onFileSelect(files, type) {
+    if (type === "photos") {
+      setImage(files);
+      togglePreview();
+    }
+  }
+
   const handleNewMessage = useCallback(
     (payload) => {
-      // payload shape: { message, sender, receiver }
       const { message, sender, receiver } = payload;
       const senderId = normalizeId(message.senderId);
       const receiverId = normalizeId(message.receiverId);
       const loggedInId = authUserRef.current?._id;
       const openChatId = selectedUserRef.current?._id;
 
-      // 1) Always update sidebar last message (pass loggedInUserId)
       dispatch(
         updateLastMessageInSidebar({
           message,
@@ -75,16 +89,12 @@ export default function ChatContainer() {
             receiverId: loggedInId,
           });
 
-          // update local UI immediately for smooth UX
           dispatch(markMessagesAsSeen({ messageIds: [message._id] }));
         } else {
-          // Message in an open chat but from me? (rare) -> still mark delivered
           socket.emit("message_delivered", { messageId: message._id });
         }
       } else {
-        // Chat not open for this conversation -> only mark delivered
         socket.emit("message_delivered", { messageId: message._id });
-        // Sidebar already updated above
       }
     },
     [dispatch, socket]
@@ -92,11 +102,8 @@ export default function ChatContainer() {
 
   const handleMessageStatusUpdate = useCallback(
     (payload) => {
-      // payload shape: { message, sender, receiver }
       const { message, sender, receiver } = payload;
-      // update message in chat if present
       dispatch(updateMessageStatus(message));
-      // also update sidebar last message (so delivered tick shows)
       dispatch(
         updateLastMessageInSidebar({
           message,
@@ -179,12 +186,14 @@ export default function ChatContainer() {
     <Box
       flex="1"
       display="flex"
+      position={"relative"}
       flexDirection="column"
       height="100dvh"
       width="100%"
       borderLeft="1px solid #ccc"
       background={
-        'linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url("https://images.unsplash.com/photo-1623150502742-6a849aa94be4?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")'
+        // 'linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url("https://images.unsplash.com/photo-1623150502742-6a849aa94be4?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")'
+        'linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url("https://www.shutterstock.com/image-vector/social-media-sketch-vector-seamless-600nw-1660950727.jpg")'
       }
       backgroundSize="cover"
       backgroundPosition="center"
@@ -221,12 +230,27 @@ export default function ChatContainer() {
               alignSelf={
                 message.senderId === authUser._id ? "flex-end" : "flex-start"
               }
+              boxShadow="sm"
             >
-              <Text fontSize="sm" whiteSpace="pre-wrap">
-                {message.text}
-              </Text>
+              {message.image ? (
+                <Box mb={2}>
+                  <Image
+                    src={`${BASE_URL}/${message.image.split("upload/")[1]}`}
+                    alt="Preview"
+                    fit="contain"
+                    w="100%"
+                    maxH="250px"
+                    borderRadius="md"
+                  />
+                </Box>
+              ) : (
+                <Text fontSize="sm" whiteSpace="pre-wrap" mb={2}>
+                  {message.text}
+                </Text>
+              )}
 
-              <Flex mt={1} justify="flex-end" align="center" gap={1}>
+              {/* ✅ Time + Status INSIDE box, aligned properly */}
+              <Flex justify="flex-end" align="center" gap={1}>
                 <Text fontSize="xs" color="gray.500">
                   {formatTime(message.createdAt)}
                 </Text>
@@ -251,7 +275,15 @@ export default function ChatContainer() {
       {!isMessagesLoading && messages.length <= 0 && (
         <Flex p={4} overflowY="auto" h="calc(100% - 130px)"></Flex>
       )}
-      <MessageInput />
+      <MessageInput onFileSelect={onFileSelect} />
+
+      {showPreview && (
+        <FilePreview
+          image={image[0]}
+          togglePreview={togglePreview}
+          setImage={setImage}
+        />
+      )}
     </Box>
   );
 }

@@ -9,6 +9,7 @@ const initialState = {
   selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  isImageUploading: false,
 };
 
 // Thunks
@@ -44,7 +45,9 @@ export const sendMessage = createAsyncThunk(
       const state = getState();
       const selectedUser = state.chat.selectedUser;
       const authUser = state.auth.authUser;
-
+      // if (messageData.image) {
+      //   dispatch(setImageUploadingState(true));
+      // }
       const res = await axiosInstance.post(
         `/message/send/${selectedUser._id}`,
         messageData
@@ -72,6 +75,9 @@ const chatSlice = createSlice({
   reducers: {
     setSelectedUser: (state, action) => {
       state.selectedUser = action.payload;
+    },
+    setImageUploadingState: (state, action) => {
+      state.isImageUploading = action.payload || false;
     },
     addIncomingMessage: (state, action) => {
       const newMessage = action.payload;
@@ -107,6 +113,7 @@ const chatSlice = createSlice({
           profilePic: receiver ? receiver.profilePic : "",
         },
         text: message.text,
+        image: message.image,
         status: message.status,
         createdAt: message.createdAt,
         updatedAt: message.updatedAt,

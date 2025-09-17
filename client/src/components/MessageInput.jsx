@@ -14,12 +14,12 @@ import { useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   sendMessage,
-  updateLastMessageInSidebar,
 } from "../redux/slices/ChatSlice";
+import ChatActions from "./ChatActions";
 
 const MotionBox = motion.create(Box);
 
-export default function MessageInput() {
+export default function MessageInput({onFileSelect}) {
   const { isOpen, onToggle } = useDisclosure();
   const { authUser } = useSelector((state) => state.auth);
   const { selectedUser } = useSelector((state) => state.chat);
@@ -66,7 +66,7 @@ export default function MessageInput() {
   };
 
   return (
-    <Box bg="#F0F2F5" p={3}>
+    <Box bg="#F0F2F5" p={3} >
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -94,30 +94,7 @@ export default function MessageInput() {
             />
 
             {/* Modal on top */}
-            {isOpen && (
-              <VStack
-                position="absolute"
-                bottom="130%"
-                left="0"
-                spacing={2}
-                bg="white"
-                p={2}
-                borderRadius="md"
-                boxShadow="md"
-                align="start"
-                w="150px"
-                zIndex={10}
-              >
-                {["Document", "Camera", "Photos & Videos"].map((item) => (
-                  <Text
-                    key={item}
-                    _hover={{ color: "blue.500", cursor: "pointer" }}
-                  >
-                    {item}
-                  </Text>
-                ))}
-              </VStack>
-            )}
+            {isOpen && <ChatActions onFileSelect={onFileSelect} />}
           </Box>
 
           {/* Input field */}

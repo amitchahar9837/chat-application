@@ -90,7 +90,8 @@ export const sendMessage = async (req, res) => {
     const { text, image } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
-
+//https://res.cloudinary.com/developer-amit-1718/image/upload/v1758108528/r8pvppmpdfa5eyid5js2.png
+//https://res.cloudinary.com/developer-amit-1718/image/upload/v1758108384/yqxxcbjvanejige62rdz.png
     const sender =  await User.findById(senderId).select("fullName profilePic");
     const receiver =  await User.findById(receiverId).select("fullName profilePic");
 
