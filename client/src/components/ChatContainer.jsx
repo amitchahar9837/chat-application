@@ -22,127 +22,158 @@ export default function ChatContainer() {
   const dispatch = useDispatch();
   const messagesContainerRef = React.useRef(null);
   const socket = useSelector((state) => state.auth.socket);
-  const [isTyping, setIsTyping] = React.useState(false);
-  const [seenEmitted, setSeenEmitted] = React.useState(false);
   const lastMessageRef = React.useRef(null);
-  const isSocketListenersAttached = React.useRef(false);
+
+  const selectedUserRef = React.useRef(selectedUser);
+  const authUserRef = React.useRef(authUser);
 
   useEffect(() => {
-    if (selectedUser) {
-      dispatch(getMessages(selectedUser._id));
-    }
+    selectedUserRef.current = selectedUser;
   }, [selectedUser]);
-
   useEffect(() => {
-    setSeenEmitted(false);
-  }, [selectedUser?._id]);
+    authUserRef.current = authUser;
+  }, [authUser]);
 
-  useEffect(() => {
-    if (selectedUser && socket) {
-      socket.emit("mark_as_seen", {
-        senderId: selectedUser._id,
-        receiverId: authUser._id,
-      });
-    }
-  }, [selectedUser]);
+  const normalizeId = (val) => (val && typeof val === "object" ? val._id : val);
 
-  useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop =
-        messagesContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
+  const handleNewMessage = useCallback(
+    (payload) => {
+      // payload shape: { message, sender, receiver }
+      const { message, sender, receiver } = payload;
+      const senderId = normalizeId(message.senderId);
+      const receiverId = normalizeId(message.receiverId);
+      const loggedInId = authUserRef.current?._id;
+      const openChatId = selectedUserRef.current?._id;
 
-  useEffect(() => {
-    lastMessageRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    if (!socket || isSocketListenersAttached.current) return;
-
-    const handleNewMessage = (message) => {
-      dispatch(addIncomingMessage(message));
+      // 1) Always update sidebar last message (pass loggedInUserId)
       dispatch(
-        updateLastMessageInSidebar({ ...message, authUserId: authUser._id })
+        updateLastMessageInSidebar({
+          message,
+          sender:
+            sender ||
+            (typeof message.senderId === "object" ? message.senderId : null),
+          receiver:
+            receiver ||
+            (typeof message.receiverId === "object"
+              ? message.receiverId
+              : null),
+          loggedInUserId: loggedInId,
+        })
       );
 
-      if (message.receiverId === authUser._id) {
-        socket.emit("message_delivered", {
-          messageId: message._id,
-          senderId: message.senderId,
-          receiverId: message.receiverId,
-        });
+      // 2) If current chat is open and message belongs to this chat => add to chat container
+      const isRelevantToOpenChat =
+        openChatId && (senderId === openChatId || receiverId === openChatId);
+      if (isRelevantToOpenChat) {
+        dispatch(addIncomingMessage(message));
+
+        // If message is from the open chat user -> mark as seen
+        if (senderId === openChatId) {
+          // emit seen (server will mark messages seen and notify sender)
+          socket.emit("mark_as_seen", {
+            senderId: senderId,
+            receiverId: loggedInId,
+          });
+
+          // update local UI immediately for smooth UX
+          dispatch(markMessagesAsSeen({ messageIds: [message._id] }));
+        } else {
+          // Message in an open chat but from me? (rare) -> still mark delivered
+          socket.emit("message_delivered", { messageId: message._id });
+        }
+      } else {
+        // Chat not open for this conversation -> only mark delivered
+        socket.emit("message_delivered", { messageId: message._id });
+        // Sidebar already updated above
       }
-    };
+    },
+    [dispatch, socket]
+  );
 
-    const handleStatusUpdate = (updatedMessage) => {
-      dispatch(updateMessageStatus(updatedMessage));
-    };
+  const handleMessageStatusUpdate = useCallback(
+    (payload) => {
+      // payload shape: { message, sender, receiver }
+      const { message, sender, receiver } = payload;
+      // update message in chat if present
+      dispatch(updateMessageStatus(message));
+      // also update sidebar last message (so delivered tick shows)
+      dispatch(
+        updateLastMessageInSidebar({
+          message,
+          sender,
+          receiver,
+          loggedInUserId: authUserRef.current?._id,
+        })
+      );
+    },
+    [dispatch]
+  );
 
-    const handleSeenUpdate = (from, messageIds) => {
-      dispatch(markMessagesAsSeen({ from, messageIds }));
-    };
+  const handleMessageSeen = useCallback(
+    (payload) => {
+      const { message, sender, receiver } = payload;
+      dispatch(markMessagesAsSeen({ messageIds: [message._id] }));
+      dispatch(
+        updateLastMessageInSidebar({
+          message,
+          sender,
+          receiver,
+          loggedInUserId: authUserRef.current?._id,
+        })
+      );
+    },
+    [dispatch]
+  );
+  useEffect(() => {
+    if (!socket) return;
 
     socket.on("newMessage", handleNewMessage);
-    socket.on("message_seen", handleSeenUpdate);
-    socket.on("message_status_update", handleStatusUpdate);
-
-    isSocketListenersAttached.current = true;
+    socket.on("message_status_update", handleMessageStatusUpdate);
+    socket.on("message_seen", handleMessageSeen);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
-      socket.off("message_seen", handleSeenUpdate);
-      socket.off("message_status_update", handleStatusUpdate);
-      isSocketListenersAttached.current = false;
+      socket.off("message_status_update", handleMessageStatusUpdate);
+      socket.off("message_seen", handleMessageSeen);
     };
-  }, [socket, authUser._id]);
+  }, [socket]);
 
   useEffect(() => {
-    socket?.on("typing", ({ senderId }) => {
-      if (senderId === selectedUser?._id) {
-        setIsTyping(true);
-      }
-    });
+    if (!selectedUser) return;
 
-    socket?.on("stop_typing", ({ senderId }) => {
-      if (senderId === selectedUser?._id) {
-        setIsTyping(false);
-      }
-    });
+    // 1️⃣ Fetch messages from backend
+    dispatch(getMessages(selectedUser._id))
+      .unwrap()
+      .then((fetchedMessages) => {
+        const unreadMessages = fetchedMessages.filter(
+          (msg) => msg.status !== "seen" && msg.senderId === selectedUser._id
+        );
 
-    return () => {
-      socket?.off("typing");
-      socket?.off("stop_typing");
-    };
-  }, [selectedUser]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (
-          entry.isIntersecting &&
-          messages.length > 0 &&
-          messages[messages.length - 1].senderId === selectedUser._id &&
-          !seenEmitted
-        ) {
+        if (unreadMessages.length > 0) {
           socket.emit("mark_as_seen", {
             senderId: selectedUser._id,
             receiverId: authUser._id,
           });
-          setSeenEmitted(true);
+
+          dispatch(
+            markMessagesAsSeen({
+              messageIds: unreadMessages.map((msg) => msg._id),
+            })
+          );
         }
-      },
-      { threshold: 0.9 } // use 0.9 instead of 1.0 to make it more responsive
-    );
+      });
+  }, [selectedUser, dispatch, socket, authUser._id]);
 
-    const lastNode = lastMessageRef.current;
-    if (lastNode) observer.observe(lastNode);
+  useEffect(() => {
+    if (!messagesContainerRef.current) return;
 
-    return () => {
-      if (lastNode) observer.unobserve(lastNode);
-    };
-  }, [messages, selectedUser, seenEmitted]);
+    // Always scroll to bottom when new messages arrive
+    const container = messagesContainerRef.current;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages]);
 
   return (
     <Box
@@ -163,13 +194,13 @@ export default function ChatContainer() {
         user={{ fullName: selectedUser.fullName, profilePic: "" }}
         isOnline={onlineUsers && onlineUsers.includes(selectedUser._id)}
         onDeleteChat={() => console.log("Chat deleted")}
-        isTyping={isTyping}
       />
       {isMessagesLoading && (
         <Box w={"100%"} h={"calc(100% - 130px)"} overflowY={"auto"}>
           <ChatSkeleton />
         </Box>
       )}
+
       {!isMessagesLoading && messages.length > 0 && (
         <Flex
           p={4}
@@ -181,7 +212,7 @@ export default function ChatContainer() {
         >
           {messages.map((message, idx) => (
             <Box
-              key={message._id}
+              key={idx}
               ref={idx === messages.length - 1 ? lastMessageRef : null}
               bg={message.senderId === authUser._id ? "green.100" : "white"}
               p={3}
@@ -191,12 +222,10 @@ export default function ChatContainer() {
                 message.senderId === authUser._id ? "flex-end" : "flex-start"
               }
             >
-              {/* Message Text */}
               <Text fontSize="sm" whiteSpace="pre-wrap">
                 {message.text}
               </Text>
 
-              {/* Time + Tick Status */}
               <Flex mt={1} justify="flex-end" align="center" gap={1}>
                 <Text fontSize="xs" color="gray.500">
                   {formatTime(message.createdAt)}
@@ -218,6 +247,9 @@ export default function ChatContainer() {
             </Box>
           ))}
         </Flex>
+      )}
+      {!isMessagesLoading && messages.length <= 0 && (
+        <Flex p={4} overflowY="auto" h="calc(100% - 130px)"></Flex>
       )}
       <MessageInput />
     </Box>

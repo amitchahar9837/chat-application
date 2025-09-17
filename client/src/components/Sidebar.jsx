@@ -27,10 +27,9 @@ import {
   useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  addIncomingMessage,
   getUsers,
   setSelectedUser,
   updateLastMessageInSidebar,
@@ -42,6 +41,7 @@ import SidebarUser from "./SidebarUser";
 
 export default function Sidebar() {
   const profileModal = useDisclosure();
+  const borderColor = useColorModeValue("gray.200", "gray.700");
   const logoutModal = useDisclosure();
   const [searchQuery, setSearchQuery] = useState("");
   const { users, isUsersLoading } = useSelector((state) => state.chat);
@@ -57,36 +57,23 @@ export default function Sidebar() {
   };
 
   useEffect(() => {
-    dispatch(getUsers());
-  }, []);
-  const handleNewMessage = useCallback(
-    (message) => {
-      dispatch(addIncomingMessage(message));
+    if (!socket) return;
+    socket.on("newMessage", (msg) => {
+      socket.emit("message_delivered", { messageId: msg.message._id });
       dispatch(
-        updateLastMessageInSidebar({
-          ...message,
-          authUserId: authUser._id,
-        })
+        updateLastMessageInSidebar({ ...msg, loggedInUserId: authUser._id })
+      ); 
+    });
+    socket.on("message_status_update", (msg) => {
+      dispatch(
+        updateLastMessageInSidebar({ ...msg, loggedInUserId: authUser._id })
       );
-
-      socket.emit("message_delivered", {
-        messageId: message._id,
-        senderId: message.senderId,
-        receiverId: message.receiverId,
-      });
-    },
-    [dispatch, authUser?._id, socket]
-  );
+    });    
+  }, [socket]);
 
   useEffect(() => {
-    if (!socket) return;
-
-    socket.on("newMessage", handleNewMessage);
-
-    return () => {
-      socket.off("newMessage", handleNewMessage);
-    };
-  }, [socket, handleNewMessage]);
+    dispatch(getUsers());
+  }, []);
 
   const searchEverything = async (searhQuery) => {
     try {
@@ -114,7 +101,7 @@ export default function Sidebar() {
       height="100vh"
       w={{ base: "100%", md: "50%", lg: "40%", xl: "30%" }}
       borderRight="1px solid"
-      borderColor={useColorModeValue("gray.200", "gray.700")}
+      borderColor={borderColor}
       overflowY="auto"
       boxShadow={{ base: "none", md: "md" }}
       px={3}
@@ -191,15 +178,17 @@ export default function Sidebar() {
       {searchQuery.length === 0 && (
         <Box mt={4}>
           {isUsersLoading ? (
-            [...Array(10)].map((_, index) => (
-              <HStack gap="5" key={index}>
-                <SkeletonCircle size="12" />
-                <Stack flex="1">
-                  <Skeleton height="5" />
-                  <Skeleton height="5" width="80%" />
-                </Stack>
-              </HStack>
-            ))
+            <Box display={"flex"} flexDir={"column"} gap={2}>
+              {[...Array(10)].map((_, index) => (
+                <HStack gap="5" key={index}>
+                  <SkeletonCircle size="12" />
+                  <Stack flex="1">
+                    <Skeleton height="5" />
+                    <Skeleton height="5" width="80%" />
+                  </Stack>
+                </HStack>
+              ))}
+            </Box>
           ) : users.length > 0 ? (
             users.map((data) => (
               <SidebarUser
@@ -208,6 +197,7 @@ export default function Sidebar() {
                 dispatch={dispatch}
                 onlineUsers={onlineUsers}
                 setSelectedUser={setSelectedUser}
+                authUser={authUser}
               />
             ))
           ) : (
@@ -338,10 +328,10 @@ export default function Sidebar() {
           <ModalHeader>User Profile</ModalHeader>
           <ModalBody>
             <Flex direction="column" align="center" gap={4}>
-              <Avatar size="xl" name={authUser.fullName} />
-              <Text fontWeight="medium">{authUser.fullName}</Text>
+              <Avatar size="xl" name={authUser?.fullName} />
+              <Text fontWeight="medium">{authUser?.fullName}</Text>
               <Text fontSize="sm" color="gray.500">
-                {authUser.email}
+                {authUser?.email}
               </Text>
             </Flex>
           </ModalBody>

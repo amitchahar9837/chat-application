@@ -22,22 +22,41 @@ import {
 } from "@chakra-ui/react";
 import { ArrowBackIcon, Search2Icon } from "@chakra-ui/icons";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { resetMessages, setSelectedUser } from "../redux/slices/ChatSlice";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
-export default function ChatTopHeader({
-  user,
-  isOnline,
-  onDeleteChat,
-  isTyping,
-}) {
+export default function ChatTopHeader({ user, isOnline, onDeleteChat }) {
+  const [isTyping, setIsTyping] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const MotionText = motion.create(Text);
+  const socket = useSelector((state) => state.auth.socket);
+  const selectedUser = useSelector((state) => state.chat.selectedUser);
+
+  useEffect(() => {
+    if (!socket || !selectedUser) return;
+
+    const handleTyping = (s) => {
+      setIsTyping(true);
+    };
+
+    const handleStopTyping = (e) => {
+      setIsTyping(false);
+    };
+
+    socket.on("typing", handleTyping);
+    socket.on("stop_typing", handleStopTyping);
+
+    return () => {
+      socket.off("typing", handleTyping);
+      socket.off("stop_typing", handleStopTyping);
+    };
+  }, [socket, selectedUser]);
 
   return (
     <Flex
@@ -61,11 +80,11 @@ export default function ChatTopHeader({
         <Avatar size="sm" name={user.fullName} src={user.profilePic || ""} />
         <Box>
           <Text fontWeight="bold">{user.fullName}</Text>
-          {/* {isOnline && isTyping !== true && (
+          {isOnline && isTyping !== true && (
             <Text fontSize="sm" color="green.500">
               Online
             </Text>
-          )} */}
+          )}
           {isTyping && (
             <MotionText
               fontSize="sm"
@@ -73,7 +92,7 @@ export default function ChatTopHeader({
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.4 }}
             >
               Typing...
             </MotionText>

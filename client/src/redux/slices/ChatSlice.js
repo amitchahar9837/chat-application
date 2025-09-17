@@ -37,21 +37,30 @@ export const getMessages = createAsyncThunk(
     }
   }
 );
-
 export const sendMessage = createAsyncThunk(
   "chat/sendMessage",
-  async (messageData, { getState, rejectWithValue }) => {
-    console.log("messageData", messageData);
+  async (messageData, { getState, dispatch, rejectWithValue }) => {
     try {
-      const selectedUser = getState().chat.selectedUser;
+      const state = getState();
+      const selectedUser = state.chat.selectedUser;
+      const authUser = state.auth.authUser;
+
       const res = await axiosInstance.post(
         `/message/send/${selectedUser._id}`,
         messageData
       );
+
+      dispatch(
+        updateLastMessageInSidebar({
+          ...res.data,
+          loggedInUserId: authUser._id,
+        })
+      );
+
       return res.data;
     } catch (error) {
-      toast.error(error.response.data.message);
-      return rejectWithValue(error.response.data.message);
+      toast.error(error.response?.data?.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   }
 );
@@ -75,35 +84,59 @@ const chatSlice = createSlice({
       }
     },
     updateLastMessageInSidebar: (state, action) => {
-      const {
-        senderId,
-        receiverId,
-        text,
-        createdAt,
-        authUserId,
-        sender,
-        receiver,
-      } = action.payload;
+      const { message, sender, receiver, loggedInUserId } = action.payload;
 
-      const targetId = senderId === authUserId ? receiverId : senderId;
-      const targetUser = senderId === authUserId ? receiver : sender;
+      const senderId =
+        typeof message.senderId === "object"
+          ? message.senderId._id
+          : message.senderId;
+      const receiverId =
+        typeof message.receiverId === "object"
+          ? message.receiverId._id
+          : message.receiverId;
+      const fullLastMessage = {
+        _id: message._id,
+        senderId: {
+          _id: sender._id,
+          fullName: sender.fullName,
+          profilePic: sender.profilePic,
+        },
+        receiverId: {
+          _id: receiver ? receiver._id : receiverId,
+          fullName: receiver ? receiver.fullName : "",
+          profilePic: receiver ? receiver.profilePic : "",
+        },
+        text: message.text,
+        status: message.status,
+        createdAt: message.createdAt,
+        updatedAt: message.updatedAt,
+      };
 
-      const userIndex = state.users.findIndex((u) => u.user._id === targetId);
+      const conversationUserId =
+        senderId === loggedInUserId ? receiverId : senderId;
+
+      const userIndex = state.users.findIndex(
+        (u) => u.user._id === conversationUserId
+      );
+
       if (userIndex !== -1) {
-        state.users[userIndex].lastMessage = text;
-        state.users[userIndex].updatedAt = createdAt;
+        state.users[userIndex].lastMessage = fullLastMessage;
+        const updatedUser = state.users.splice(userIndex, 1)[0];
+        state.users.unshift(updatedUser);
       } else {
+        const userToAdd = senderId === loggedInUserId ? receiver : sender;
+
         state.users.unshift({
           user: {
-            _id: targetUser._id,
-            fullName: targetUser.fullName,
-            profilePic: targetUser.profilePic,
+            _id: userToAdd._id,
+            fullName: userToAdd.fullName,
+            profilePic: userToAdd.profilePic,
           },
-          lastMessage: text,
-          updatedAt: createdAt,
+          lastMessage: fullLastMessage,
         });
       }
     },
+
     markMessagesAsSeen: (state, action) => {
       const { messageIds } = action.payload;
 
@@ -151,13 +184,13 @@ const chatSlice = createSlice({
 
       // sendMessage
       .addCase(sendMessage.fulfilled, (state, action) => {
-        const newMessage = action.payload;
+        const { message } = action.payload;
         const isRelevant =
-          newMessage.senderId === state.selectedUser?._id ||
-          newMessage.receiverId === state.selectedUser?._id;
+          message.senderId === state.selectedUser?._id ||
+          message.receiverId === state.selectedUser?._id;
 
         if (isRelevant) {
-          state.messages.push(newMessage);
+          state.messages.push(message);
         }
       });
   },

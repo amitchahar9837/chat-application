@@ -47,7 +47,7 @@ export default function Auth() {
                 textAlign={"center"}
                 paddingX={"1rem"}
               >
-                Fill in the details to get started with chat application
+                Fill in the details to get started with GupShup
               </Text>
             </Box>
             <Tabs variant="unstyled" w={"90%"} mt={5}>

@@ -36,17 +36,6 @@ export default function MessageInput() {
 
     try {
       dispatch(sendMessage(messageData));
-      dispatch(
-        updateLastMessageInSidebar({
-          text: messageData.text,
-          createdAt: new Date().toISOString(),
-          authUserId: authUser._id,
-          senderId: authUser._id,
-          receiverId: selectedUser._id,
-          sender: authUser,
-          receiver: selectedUser,
-        })
-      );
       setMessageData({ text: "", image: null });
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -73,7 +62,7 @@ export default function MessageInput() {
         receiverId: selectedUser._id,
         senderId: authUser._id,
       });
-    }, 3000);
+    }, 2000);
   };
 
   return (
