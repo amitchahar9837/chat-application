@@ -7,66 +7,11 @@ const initialState = {
   messages: [],
   users: [],
   selectedUser: null,
+  uploadFile: null,
   isUsersLoading: false,
   isMessagesLoading: false,
   isImageUploading: false,
 };
-
-// Thunks
-export const getUsers = createAsyncThunk(
-  "chat/getUsers",
-  async (_, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.get("/message/users");
-      return res.data;
-    } catch (error) {
-      toast.error(error.response.data.message);
-      return rejectWithValue(error.response.data.message);
-    }
-  }
-);
-
-export const getMessages = createAsyncThunk(
-  "chat/getMessages",
-  async (userId, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.get(`/message/${userId}`);
-      return res.data;
-    } catch (error) {
-      toast.error(error.response.data.message);
-      return rejectWithValue(error.response.data.message);
-    }
-  }
-);
-export const sendMessage = createAsyncThunk(
-  "chat/sendMessage",
-  async (messageData, { getState, dispatch, rejectWithValue }) => {
-    try {
-      const state = getState();
-      const selectedUser = state.chat.selectedUser;
-      const authUser = state.auth.authUser;
-      // if (messageData.image) {
-      //   dispatch(setImageUploadingState(true));
-      // }
-      const res = await axiosInstance.post(
-        `/message/send/${selectedUser._id}`,
-        messageData
-      );
-
-      dispatch(
-        updateLastMessageInSidebar({
-          ...res.data,
-          loggedInUserId: authUser._id,
-        })
-      );
-
-      return res.data;
-    } catch (error) {
-      toast.error(error.response?.data?.message);
-      return rejectWithValue(error.response?.data?.message);
-    }
-  }
-);
 
 // Slice
 const chatSlice = createSlice({
@@ -143,7 +88,19 @@ const chatSlice = createSlice({
         });
       }
     },
-
+    addTemporaryMessage: (state, action) => {
+      state.messages.push(action.payload);
+    },
+    replaceTemporaryMessage: (state, action) => {
+      const { tempId, newMessage } = action.payload;
+      const index = state.messages.findIndex((msg) => msg._id === tempId);
+      if (index !== -1) {
+        state.messages[index] = {
+          ...newMessage.message,
+          isUploading: false,
+        };
+      }
+    },
     markMessagesAsSeen: (state, action) => {
       const { messageIds } = action.payload;
 
@@ -151,6 +108,18 @@ const chatSlice = createSlice({
         messageIds.includes(msg._id) ? { ...msg, status: "seen" } : msg
       );
     },
+    markAllMessagesAsSeen: (state, action) => {
+      const { sender, receiver } = action.payload;
+
+      state.messages = state.messages.map((msg) =>
+        String(msg.senderId) === String(sender) &&
+        String(msg.receiverId) === String(receiver) &&
+        msg.status !== "seen"
+          ? { ...msg, status: "seen" }
+          : msg
+      );
+    },
+
     updateMessageStatus: (state, action) => {
       const updatedMsg = action.payload;
 
@@ -160,6 +129,12 @@ const chatSlice = createSlice({
     },
     resetMessages: (state) => {
       state.messages = [];
+    },
+    addUploadFile: (state, action) => {
+      state.uploadFile = action.payload;
+    },
+    clearUploadFile: (state) => {
+      state.uploadFile = null;
     },
     resetChatState: () => initialState,
   },
@@ -187,19 +162,19 @@ const chatSlice = createSlice({
       })
       .addCase(getMessages.rejected, (state) => {
         state.isMessagesLoading = false;
-      })
-
-      // sendMessage
-      .addCase(sendMessage.fulfilled, (state, action) => {
-        const { message } = action.payload;
-        const isRelevant =
-          message.senderId === state.selectedUser?._id ||
-          message.receiverId === state.selectedUser?._id;
-
-        if (isRelevant) {
-          state.messages.push(message);
-        }
       });
+
+    // sendMessage
+    // .addCase(sendMessage.fulfilled, (state, action) => {
+    //   const { message } = action.payload;
+    //   const isRelevant =
+    //     message.senderId === state.selectedUser?._id ||
+    //     message.receiverId === state.selectedUser?._id;
+
+    //   if (isRelevant) {
+    //     state.messages.push(message);
+    //   }
+    // });
   },
 });
 
@@ -211,5 +186,81 @@ export const {
   resetMessages,
   markMessagesAsSeen,
   updateMessageStatus,
+  replaceTemporaryMessage,
+  addTemporaryMessage,
+  addUploadFile,
+  clearUploadFile,
+  markAllMessagesAsSeen
 } = chatSlice.actions;
+
 export default chatSlice.reducer;
+
+// Thunks
+export const getUsers = createAsyncThunk(
+  "chat/getUsers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get("/message/users");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return rejectWithValue(error.response.data.message);
+    }
+  }
+);
+
+export const getMessages = createAsyncThunk(
+  "chat/getMessages",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(`/message/${userId}`);
+      return res.data;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return rejectWithValue(error.response.data.message);
+    }
+  }
+);
+export const sendMessage = createAsyncThunk(
+  "chat/sendMessage",
+  async (messageData, { getState, dispatch, rejectWithValue }) => {
+    try {
+      const state = getState();
+      const selectedUser = state.chat.selectedUser;
+      const authUser = state.auth.authUser;
+      const tempId = `temp-${Date.now()}`;
+      const tempMessage = {
+        _id: tempId,
+        senderId: authUser._id,
+        receiverId: selectedUser._id,
+        text: messageData.text || "",
+        image: messageData.image || null,
+        localFile: messageData.localFile || null,
+        isUploading: !!messageData.image,
+        status: "sending",
+        createdAt: new Date().toISOString(),
+      };
+
+      dispatch(addTemporaryMessage(tempMessage));
+      const res = await axiosInstance.post(
+        `/message/send/${selectedUser._id}`,
+        messageData
+      );
+      dispatch(replaceTemporaryMessage({ tempId, newMessage: res.data }));
+      dispatch(clearUploadFile());
+
+      dispatch(
+        updateLastMessageInSidebar({
+          ...res.data,
+          loggedInUserId: authUser._id,
+        })
+      );
+
+      return res.data;
+    } catch (error) {
+      console.log(error);
+      toast.error(error.response?.data?.message);
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);

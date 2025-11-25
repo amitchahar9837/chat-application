@@ -31,9 +31,9 @@ export const signup = async (req, res) => {
       fullName: ["The fullname field must be at least 3 characters long."],
     });
   }
-  if (!fullName) {
+  if (!password) {
     return errorHandler(res, 404, "Validation error.", {
-      fullName: ["The fullname field is required."],
+      password: ["The password field is required."],
     });
   }
   if (password.length < 6) {
@@ -124,10 +124,10 @@ export const login = async (req, res) => {
   } catch (error) {
     errorHandler(res, error.statusCode, error.message);
   }
-};
+};  
 
 //LOGOUT Controller
-export const logout = async (req, res) => {
+export const logout = async (req, res) => {                                                                                                                                                                                                                                               
   try {
     res.clearCookie("token");
     res.status(200).json({

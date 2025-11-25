@@ -1,4 +1,4 @@
-import { Text, VStack } from "@chakra-ui/react";
+import { Box, VStack } from "@chakra-ui/react";
 import { useRef } from "react";
 
 const ChatActions = ({onFileSelect}) => {
@@ -11,9 +11,6 @@ const ChatActions = ({onFileSelect}) => {
     if (type === "videos") videoInputRef.current.click();
     if (type === "documents") docInputRef.current.click();
   };
-  function togglePreview(){
-    setShowPreview(prev=>!prev)
-  }
 
   const handleFileChange = (e, type) => {
     const files = Array.from(e.target.files);
@@ -36,10 +33,10 @@ const ChatActions = ({onFileSelect}) => {
         w="150px"
         zIndex={10}
       >
-        <Text _hover={{ color: "blue.500", cursor: "pointer" }} onClick={() => handleFileClick("documents")}>Document</Text>
-        <Text _hover={{ color: "blue.500", cursor: "pointer" }} onClick={() => handleFileClick("camera")}>Camera</Text>
-        <Text _hover={{ color: "blue.500", cursor: "pointer" }} onClick={() => handleFileClick("photos")}>Photos</Text>
-        <Text _hover={{ color: "blue.500", cursor: "pointer" }} onClick={() => handleFileClick("videos")}>Videos</Text>
+        <Box _hover={{ color: "blue.500", bg:'gray.100', cursor: "pointer" }} display={'block'} w={'100%'} p={1} onClick={() => handleFileClick("documents")}>Documents</Box>
+        <Box _hover={{ color: "blue.500", bg:'gray.100', cursor: "pointer" }} display={'block'} w={'100%'} p={1} onClick={() => handleFileClick("camera")}>Camera</Box>
+        <Box _hover={{ color: "blue.500", bg:'gray.100', cursor: "pointer" }} display={'block'} w={'100%'} p={1} onClick={() => handleFileClick("photos")}>photos</Box>
+        <Box _hover={{ color: "blue.500", bg:'gray.100', cursor: "pointer" }} display={'block'} w={'100%'} p={1} onClick={() => handleFileClick("videos")}>videos</Box>
       </VStack>
 
       {/* Hidden inputs */}

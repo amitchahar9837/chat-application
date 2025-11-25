@@ -65,6 +65,11 @@ export default function MessageInput({onFileSelect}) {
     }, 2000);
   };
 
+  const onSelect = (files, type)=>{
+    onToggle();
+    onFileSelect(files, type);
+  }
+
   return (
     <Box bg="#F0F2F5" p={3} >
       <form
@@ -94,7 +99,7 @@ export default function MessageInput({onFileSelect}) {
             />
 
             {/* Modal on top */}
-            {isOpen && <ChatActions onFileSelect={onFileSelect} />}
+            {isOpen && <ChatActions onFileSelect={onSelect} />}
           </Box>
 
           {/* Input field */}

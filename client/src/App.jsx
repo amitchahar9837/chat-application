@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { checkAuth } from "./redux/slices/AuthSlice";
 import { Spinner, Text, useBreakpointValue, VStack } from "@chakra-ui/react";
 import "./App.css";
-import { setSelectedUser } from "./redux/slices/ChatSlice";
+import { resetMessages, setSelectedUser } from "./redux/slices/ChatSlice";
 import { ChatContainer } from "./components";
 
 export default function App() {
@@ -17,6 +17,7 @@ export default function App() {
   useEffect(() => {
     dispatch(checkAuth());
     dispatch(setSelectedUser(null));
+    dispatch(resetMessages())
   }, []);
 
   if (isCheckingAuth && !authUser) {

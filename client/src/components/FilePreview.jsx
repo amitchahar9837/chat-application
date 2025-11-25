@@ -7,7 +7,7 @@ import { useDispatch } from "react-redux";
 import { convertToBase64 } from "../utils/Base64Image";
 import toast from "react-hot-toast";
 
-export default function FilePreview({ image, togglePreview, setImage }) {
+export default function FilePreview({ image, togglePreview }) {
   const dispatch = useDispatch();
   let messageData;
 
@@ -17,10 +17,9 @@ export default function FilePreview({ image, togglePreview, setImage }) {
       return;
     }
     const base64Image = await convertToBase64(image);
-    messageData = { image: base64Image };
+    messageData = { image: base64Image, localFile: image || null, };
     dispatch(sendMessage(messageData));
     togglePreview();
-    setImage(null);
   };
   return (
     <AnimatePresence>
@@ -53,6 +52,7 @@ export default function FilePreview({ image, togglePreview, setImage }) {
             size="md"
             alignSelf="flex-start"
             variant="ghost"
+            flexShrink={0}
             mb={10}
             _hover={{ bg: "gray.100" }}
           />

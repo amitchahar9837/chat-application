@@ -1,29 +1,31 @@
 import React, { useCallback, useEffect } from "react";
 import ChatTopHeader from "./ChatTopHeader";
-import { Box, Flex, Icon, Image, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import ChatSkeleton from "./ChatSkeleton";
 import MessageInput from "./MessageInput";
 import { BiCheck, BiCheckDouble } from "react-icons/bi";
 import {
   addIncomingMessage,
+  addUploadFile,
   getMessages,
+  markAllMessagesAsSeen,
   markMessagesAsSeen,
   updateLastMessageInSidebar,
   updateMessageStatus,
 } from "../redux/slices/ChatSlice";
 import { formatTime } from "../utils/formatTime";
 import FilePreview from "./FilePreview";
-// const BASE_URL =
-// "https://res.cloudinary.com/developer-amit-1718/image/upload/v1758108384/yqxxcbjvanejige62rdz.png";
+import ChatImagePreview from "./ChatImagePreview";
 const BASE_URL = "https://res.cloudinary.com/developer-amit-1718/image/upload";
 
 export default function ChatContainer() {
-  const [image, setImage] = React.useState(null);
   const [showPreview, setShowPreview] = React.useState(false);
   const selectedUser = useSelector((state) => state.chat.selectedUser);
   const onlineUsers = useSelector((state) => state.auth.onlineUsers);
-  const { isMessagesLoading, messages } = useSelector((state) => state.chat);
+  const { isMessagesLoading, messages, uploadFile } = useSelector(
+    (state) => state.chat
+  );
   const authUser = useSelector((state) => state.auth.authUser);
   const dispatch = useDispatch();
   const messagesContainerRef = React.useRef(null);
@@ -47,7 +49,7 @@ export default function ChatContainer() {
   }
   function onFileSelect(files, type) {
     if (type === "photos") {
-      setImage(files);
+      dispatch(addUploadFile(files[0]));
       togglePreview();
     }
   }
@@ -119,7 +121,7 @@ export default function ChatContainer() {
   const handleMessageSeen = useCallback(
     (payload) => {
       const { message, sender, receiver } = payload;
-      dispatch(markMessagesAsSeen({ messageIds: [message._id] }));
+      dispatch(markAllMessagesAsSeen({sender:authUser._id, receiver:receiver._id}))
       dispatch(
         updateLastMessageInSidebar({
           message,
@@ -155,7 +157,6 @@ export default function ChatContainer() {
         const unreadMessages = fetchedMessages.filter(
           (msg) => msg.status !== "seen" && msg.senderId === selectedUser._id
         );
-
         if (unreadMessages.length > 0) {
           socket.emit("mark_as_seen", {
             senderId: selectedUser._id,
@@ -173,8 +174,6 @@ export default function ChatContainer() {
 
   useEffect(() => {
     if (!messagesContainerRef.current) return;
-
-    // Always scroll to bottom when new messages arrive
     const container = messagesContainerRef.current;
     container.scrollTo({
       top: container.scrollHeight,
@@ -191,13 +190,7 @@ export default function ChatContainer() {
       height="100dvh"
       width="100%"
       borderLeft="1px solid #ccc"
-      background={
-        // 'linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url("https://images.unsplash.com/photo-1623150502742-6a849aa94be4?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")'
-        'linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url("https://www.shutterstock.com/image-vector/social-media-sketch-vector-seamless-600nw-1660950727.jpg")'
-      }
-      backgroundSize="cover"
-      backgroundPosition="center"
-      backgroundRepeat="no-repeat"
+      background="linear-gradient(135deg, #ffffff, #fef3c7)"
     >
       <ChatTopHeader
         user={{ fullName: selectedUser.fullName, profilePic: "" }}
@@ -230,27 +223,30 @@ export default function ChatContainer() {
               alignSelf={
                 message.senderId === authUser._id ? "flex-end" : "flex-start"
               }
-              boxShadow="sm"
+              shadow={"0 0 5px 0 rgba(0, 0, 0, 0.1)"}
             >
               {message.image ? (
-                <Box mb={2}>
-                  <Image
-                    src={`${BASE_URL}/${message.image.split("upload/")[1]}`}
-                    alt="Preview"
-                    fit="contain"
-                    w="100%"
-                    maxH="250px"
-                    borderRadius="md"
-                  />
-                </Box>
+                <ChatImagePreview
+                  localFile={message.localFile}
+                  imageUrl={
+                    message.image?.includes("upload/")
+                      ? `${BASE_URL}/${message.image.split("upload/")[1]}`
+                      : null
+                  }
+                  isUploading={message.isUploading}
+                />
               ) : (
                 <Text fontSize="sm" whiteSpace="pre-wrap" mb={2}>
                   {message.text}
                 </Text>
               )}
-
-              {/* ✅ Time + Status INSIDE box, aligned properly */}
-              <Flex justify="flex-end" align="center" gap={1}>
+              <Flex
+                justify={
+                  message.senderId === authUser._id ? "flex-end" : "flex-start"
+                }
+                align="center"
+                gap={1}
+              >
                 <Text fontSize="xs" color="gray.500">
                   {formatTime(message.createdAt)}
                 </Text>
@@ -278,11 +274,7 @@ export default function ChatContainer() {
       <MessageInput onFileSelect={onFileSelect} />
 
       {showPreview && (
-        <FilePreview
-          image={image[0]}
-          togglePreview={togglePreview}
-          setImage={setImage}
-        />
+        <FilePreview image={uploadFile} togglePreview={togglePreview} />
       )}
     </Box>
   );
