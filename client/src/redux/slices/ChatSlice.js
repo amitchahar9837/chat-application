@@ -258,7 +258,6 @@ export const sendMessage = createAsyncThunk(
 
       return res.data;
     } catch (error) {
-      console.log(error);
       toast.error(error.response?.data?.message);
       return rejectWithValue(error.response?.data?.message);
     }
