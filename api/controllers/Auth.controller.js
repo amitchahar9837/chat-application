@@ -46,7 +46,7 @@ export const signup = async (req, res) => {
       email: ["The email is not valid."],
     });
   }
-  if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/.test(password)) {
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{6,}$/.test(password)) {
     return errorHandler(res, 404, "Validation error.", {
       password: [
         "The password must contain at least one letter and one number.",

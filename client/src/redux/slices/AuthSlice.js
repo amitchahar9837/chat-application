@@ -45,7 +45,6 @@ export const login = createAsyncThunk(
       dispatch(connectSocket(userId));
       return res.data.data.user;
     } catch (err) {
-      console.log(err)
       toast.error(err.response?.data?.message || "Login failed");
       return rejectWithValue(err.response?.data?.message);
     }
@@ -62,7 +61,7 @@ export const signup = createAsyncThunk(
       return res.data.data.user;
     } catch (err) {
       toast.error(err.response?.data?.message || "Signup failed");
-      return rejectWithValue(err.response?.data?.message);
+      return rejectWithValue(err.response?.data);
     }
   }
 );
@@ -77,7 +76,6 @@ export const logout = createAsyncThunk(
       toast.success("Logged out successfully");
       return null;
     } catch (err) {
-      console.log(err);
       toast.error(err.response?.data?.message || "Logout failed");
       return rejectWithValue(err.response?.data?.message);
     }
