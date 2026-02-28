@@ -1,84 +1,79 @@
-import {
-  Box,
-  Grid,
-  GridItem,
-  Image,
-  Text,
-  TabList,
-  Tabs,
-  TabIndicator,
-  Tab,
-  TabPanels,
-  TabPanel,
-} from "@chakra-ui/react";
+import { Box, Flex, Image, Text, Tabs, TabList, Tab, TabPanels, TabPanel, TabIndicator, useColorModeValue } from "@chakra-ui/react";
 import Background from "../assets/login2.png";
 import { Login, Signup } from "../components";
 
 export default function Auth() {
+  const bgColor = useColorModeValue("gray.50", "gray.900");
+
   return (
-    <Box
-      w={"100vw"}
-      h={"100vh"}
-      display={"flex"}
-      justifyContent={"center"}
-      alignItems={"center"}
+    <Flex 
+      minH="100vh" 
+      align="center" 
+      justify="center" 
+      bgGradient="linear(to-br, purple.500, blue.400)"
+      p={4}
     >
       <Box
-        h={"80vh"}
-        bg={"white"}
-        border={"2px solid white"}
-        boxShadow={"2xl"}
-        opacity={0.9}
+        maxW="1000px"
+        w="full"
+        bg="whiteAlpha.900"
+        backdropFilter="blur(10px)"
+        borderRadius="3xl"
+        boxShadow="2xl"
+        overflow="hidden"
       >
-        <Grid templateColumns={{ xl: "repeat(2, 1fr)" }} w={"100%"} h={"100%"}>
-          <GridItem
-            display={"flex"}
-            justifyContent={"center"}
-            alignItems={"center"}
-            flexDirection={"column"}
-            gap={1}
-          >
-            <Box textAlign={"center"}>
-              <Text fontSize={{ base: "4xl", md: "5xl" }} fontWeight={"bold"}>
-                Welcome
+        <Flex direction={{ base: "column", lg: "row" }} align="stretch">
+          
+          {/* Left Side: Form Section */}
+          <Box flex="1" p={{ base: 6, md: 12 }}>
+            <Box mb={8} textAlign="center">
+              <Text fontSize="3xl" fontWeight="800" letterSpacing="tight" color="purple.700">
+                GupShup
               </Text>
-              <Text
-                fontWeight={"medium"}
-                textAlign={"center"}
-                paddingX={"1rem"}
-              >
-                Fill in the details to get started with GupShup
+              <Text color="gray.500" mt={2}>
+                Connect with the world in a click.
               </Text>
             </Box>
-            <Tabs variant="unstyled" w={"90%"} mt={5}>
-              <TabList justifyContent={"center"}>
-                <Tab>Login</Tab>
-                <Tab>Signup</Tab>
-              </TabList>
-              <TabIndicator mt="-1.5px" height="2px" bg="purple.600" />
-              <TabPanels>
-                <TabPanel>
-                  <Login />
-                </TabPanel>
 
-                <TabPanel>
-                  <Signup />
-                </TabPanel>
+            <Tabs variant="unstyled" isFitted>
+              <TabList bg="gray.100" p={1} borderRadius="full">
+                <Tab _selected={{ bg: "white", shadow: "sm", borderRadius: "full" }} fontWeight="600">Login</Tab>
+                <Tab _selected={{ bg: "white", shadow: "sm", borderRadius: "full" }} fontWeight="600">Signup</Tab>
+              </TabList>
+              
+              <TabPanels mt={6}>
+                <TabPanel p={0}><Login /></TabPanel>
+                <TabPanel p={0}><Signup /></TabPanel>
               </TabPanels>
             </Tabs>
-          </GridItem>
+          </Box>
 
-          <GridItem display={{ base: "none", xl: "block" }}>
-            <Image
-              src={Background}
-              alt="Login-Background"
-              w="90%"
-              h="90%"
-              objectFit="scale-down"
-            />
-          </GridItem>
-        </Grid>
+          {/* Right Side: Image/Branding (Hidden on mobile) */}
+          <Flex 
+            flex="1" 
+            bg="purple.50" 
+            align="center" 
+            justify="center" 
+            display={{ base: "none", lg: "flex" }}
+            p={8}
+          >
+            <Box textAlign="center">
+              <Image 
+                src={Background} 
+                alt="Auth Illustration" 
+                maxH="400px" 
+                objectFit="contain"
+                transition="transform 0.3s ease"
+                _hover={{ transform: "scale(1.05)" }}
+              />
+              <Text mt={6} fontSize="xl" fontWeight="bold" color="purple.800">
+                Talk Freely, Securely.
+              </Text>
+            </Box>
+          </Flex>
+          
+        </Flex>
       </Box>
-    </Box>
+    </Flex>
   );
 }
