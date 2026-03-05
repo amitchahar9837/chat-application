@@ -10,14 +10,18 @@ import { ChatContainer } from "./components";
 
 export default function App() {
   const { isCheckingAuth, authUser } = useSelector((state) => state.auth);
-  const {selectedUser} = useSelector(state =>state.chat)
+  const { selectedUser } = useSelector((state) => state.chat);
   const dispatch = useDispatch();
   const isMobile = useBreakpointValue({ base: true, md: false });
 
   useEffect(() => {
     dispatch(checkAuth());
     dispatch(setSelectedUser(null));
-    dispatch(resetMessages())
+    dispatch(resetMessages());
+
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
   }, []);
 
   if (isCheckingAuth && !authUser) {
@@ -38,7 +42,9 @@ export default function App() {
         {isMobile && (
           <Route
             path="/chat/:userId"
-            element={authUser && selectedUser ? <ChatContainer /> : <Navigate to="/" />}
+            element={
+              authUser && selectedUser ? <ChatContainer /> : <Navigate to="/" />
+            }
           />
         )}
         <Route

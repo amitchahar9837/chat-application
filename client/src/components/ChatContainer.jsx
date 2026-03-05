@@ -24,7 +24,7 @@ export default function ChatContainer() {
   const selectedUser = useSelector((state) => state.chat.selectedUser);
   const onlineUsers = useSelector((state) => state.auth.onlineUsers);
   const { isMessagesLoading, messages, uploadFile } = useSelector(
-    (state) => state.chat
+    (state) => state.chat,
   );
   const authUser = useSelector((state) => state.auth.authUser);
   const dispatch = useDispatch();
@@ -61,6 +61,15 @@ export default function ChatContainer() {
       const receiverId = normalizeId(message.receiverId);
       const loggedInId = authUserRef.current?._id;
       const openChatId = selectedUserRef.current?._id;
+      if (
+        senderId !== loggedInId &&
+        senderId !== openChatId &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("New Message", {
+          body: message.text || "📷 Image",
+        });
+      }
 
       dispatch(
         updateLastMessageInSidebar({
@@ -74,18 +83,14 @@ export default function ChatContainer() {
               ? message.receiverId
               : null),
           loggedInUserId: loggedInId,
-        })
+        }),
       );
 
-      // 2) If current chat is open and message belongs to this chat => add to chat container
       const isRelevantToOpenChat =
         openChatId && (senderId === openChatId || receiverId === openChatId);
       if (isRelevantToOpenChat) {
         dispatch(addIncomingMessage(message));
-
-        // If message is from the open chat user -> mark as seen
         if (senderId === openChatId) {
-          // emit seen (server will mark messages seen and notify sender)
           socket.emit("mark_as_seen", {
             senderId: senderId,
             receiverId: loggedInId,
@@ -99,7 +104,7 @@ export default function ChatContainer() {
         socket.emit("message_delivered", { messageId: message._id });
       }
     },
-    [dispatch, socket]
+    [dispatch, socket],
   );
 
   const handleMessageStatusUpdate = useCallback(
@@ -112,26 +117,28 @@ export default function ChatContainer() {
           sender,
           receiver,
           loggedInUserId: authUserRef.current?._id,
-        })
+        }),
       );
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleMessageSeen = useCallback(
     (payload) => {
       const { message, sender, receiver } = payload;
-      dispatch(markAllMessagesAsSeen({sender:authUser._id, receiver:receiver._id}))
+      dispatch(
+        markAllMessagesAsSeen({ sender: authUser._id, receiver: receiver._id }),
+      );
       dispatch(
         updateLastMessageInSidebar({
           message,
           sender,
           receiver,
           loggedInUserId: authUserRef.current?._id,
-        })
+        }),
       );
     },
-    [dispatch]
+    [dispatch],
   );
   useEffect(() => {
     if (!socket) return;
@@ -149,13 +156,11 @@ export default function ChatContainer() {
 
   useEffect(() => {
     if (!selectedUser) return;
-
-    // 1️⃣ Fetch messages from backend
     dispatch(getMessages(selectedUser._id))
       .unwrap()
       .then((fetchedMessages) => {
         const unreadMessages = fetchedMessages.filter(
-          (msg) => msg.status !== "seen" && msg.senderId === selectedUser._id
+          (msg) => msg.status !== "seen" && msg.senderId === selectedUser._id,
         );
         if (unreadMessages.length > 0) {
           socket.emit("mark_as_seen", {
@@ -166,7 +171,7 @@ export default function ChatContainer() {
           dispatch(
             markMessagesAsSeen({
               messageIds: unreadMessages.map((msg) => msg._id),
-            })
+            }),
           );
         }
       });
