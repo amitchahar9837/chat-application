@@ -51,6 +51,7 @@ export default function Sidebar() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResult, setSearchResult] = useState({});
   const socket = useSelector((state) => state.auth.socket);
+  const selectedUser = useSelector((state) => state.chat.selectedUser);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -63,6 +64,15 @@ export default function Sidebar() {
       dispatch(
         updateLastMessageInSidebar({ ...msg, loggedInUserId: authUser._id })
       ); 
+      if (
+        message.senderId !== authUser._id &&
+        message.senderId !== selectedUser &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("New Message", {
+          body: message.text || "📷 Image",
+        });
+      }
     });
     socket.on("message_status_update", (msg) => {
       dispatch(
